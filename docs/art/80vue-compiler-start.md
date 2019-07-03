@@ -1,5 +1,20 @@
 # Vue 的编译器初探
 
+至此，我们对 `Vue.prototype._init` 方法所做的初始化工作基本全部讲解到了，在讲解渲染函数的观察者时，我们也讲解了渲染函数是如何生成的以及渲染函数的作用。接下来我们将开启新的篇章，即看一看渲染函数是如何通过编译器生成的。我们打开 `src/platforms/web/entry-runtime-with-compiler.js` 文件，找到 `$mount` 方法，该方法中有这样一段代码：
+
+```js
+const { render, staticRenderFns } = compileToFunctions(template, {
+  shouldDecodeNewlines,
+  shouldDecodeNewlinesForHref,
+  delimiters: options.delimiters,
+  comments: options.comments
+}, this)
+options.render = render
+options.staticRenderFns = staticRenderFns
+```
+
+我们知道渲染函数 `render` 就是通过 `compileToFunctions` 函数生成的，传递给该函数的第一个参数就是模板字符串，`compileToFunctions` 函数会把模板字符串编译为渲染函数，本章的内容将以 `compileToFunctions` 函数为切入点研究编译器。
+
 ## 寻找 compileToFunctions
 
 接下来我们的主要工作，就是搞清楚 `compileToFunctions` 函数，根据 `platforms/web/entry-runtime-with-compiler.js` 文件头部的 `import` 引用关系可知，`compileToFunctions` 函数来自于当前目录下的 `./compiler/index.js` 文件，打开 `./compiler/index.js` 文件，可以发现这样一句代码：
@@ -173,13 +188,13 @@ export function createCompileToFunctionFn (compile: Function): Function {
 }
 ```
 
-以上是 `createCompileToFunctionFn` 函数的代码，我们发现这个函数的返回值是一个函数，该函数才是我们真正想要的 `compileToFunctions`，在返回这个函数之前定义了常量 `cache`，所以 `cache` 变量肯定是被 `compileToFunctions` 函数引用的，那么这里可以理解为创建了一个闭包，其实如果大家留意的话，在上面的讲解中我们已经遇到了很多利用闭包引用变量的场景，还是拿上面的代码为例，`createCompileToFunctionFn` 函数接受一个参数 `compile`，而这个参数其实也是被 `compileToFunctions` 闭包引用的。
+以上是 `createCompileToFunctionFn` 函数的代码，我们发现这个函数的返回值是一个函数，该函数才是我们真正想要的 `compileToFunctions`，在返回这个函数之前定义了常量 `cache`，所以 `cache` 常量肯定是被 `compileToFunctions` 函数引用的，那么这里可以理解为创建了一个闭包，其实如果大家留意的话，在上面的讲解中我们已经遇到了很多利用闭包引用变量的场景，还是拿上面的代码为例，`createCompileToFunctionFn` 函数接收一个参数 `compile`，而这个参数其实也是被 `compileToFunctions` 闭包引用的。
 
-至此我们经历了一波三折，终于找到了 `compileToFunctions` 函数，`/entry-runtime-with-compiler.js` 文件中执行的 `compileToFunctions` 函数，其实就是在执行 `src/compiler/to-function.js` 文件中 `createCompileToFunctionFn` 函数返回的 `compileToFunctions` 函数。
+至此我们经历了一波三折，终于找到了 `compileToFunctions` 函数，`src/platforms/web/entry-runtime-with-compiler.js` 文件中执行的 `compileToFunctions` 函数，其实就是在执行 `src/compiler/to-function.js` 文件中 `createCompileToFunctionFn` 函数返回的 `compileToFunctions` 函数。
 
 ## compileToFunctions 的作用
 
-经过前面的讲解，我们已经知道了 `entry-runtime-with-compiler.js` 文件中调用的 `compileToFunctions` 的真正来源，可以说为了创建 `compileToFunctions` 函数经历了一波三折，现在大家也许会有疑问，比如为什么要弄的这么复杂？我们暂时把这个疑问放在心里，随着我们的深入，大家将会慢慢理解其内涵。
+经过前面的讲解，我们已经知道了 `entry-runtime-with-compiler.js` 文件中调用的 `compileToFunctions` 的真正来源，可以说为了创建 `compileToFunctions` 函数经历了一波三折，现在大家也许会有疑问，比如为什么要弄的这么复杂？我们在本章的最后为大家解答这个问题。
 
 这个小节我们就以 `entry-runtime-with-compiler.js` 文件中调用的 `compileToFunctions` 开始，去探索其背后所做的事情。打开 `entry-runtime-with-compiler.js` 文件找到这段代码：
 
@@ -192,7 +207,7 @@ const { render, staticRenderFns } = compileToFunctions(template, {
 }, this)
 ```
 
-上面这段代码存在于 `Vue.prototype.$mount` 函数体内，我们已经知道 `compileToFunctions` 函数的作用是把传入的模板字符串编(`template`)译成渲染函数(`render`)的。所以传递给 `compileToFunctions` 的第一个参数就是模板字符串(`template`)，而第二个参数则是一些选项(`options`)，接下来我们先把这里传递的选项对象搞清楚，选项对象如下：
+上面这段代码存在于 `Vue.prototype.$mount` 函数体内，我们已经知道 `compileToFunctions` 函数的作用是把传入的模板字符串(`template`)编译成渲染函数(`render`)的。所以传递给 `compileToFunctions` 的第一个参数就是模板字符串(`template`)，而第二个参数则是一些选项(`options`)，接下来我们先把这里传递的选项对象搞清楚，选项对象如下：
 
 ```js
 {
@@ -203,7 +218,7 @@ const { render, staticRenderFns } = compileToFunctions(template, {
 }
 ```
 
-其中 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref` 这两个变量来自于 `platforms/web/util.js` 文件，大家可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看这两个变量的作用，其目的是对浏览器的怪癖做兼容，具体在附录中都有讲到，并且这两个变量的类型都是布尔值。
+其中 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref` 这两个常量来自于 `platforms/web/util/compat.js` 文件，大家可以在附录 [platforms/web/util 目录下的工具方法全解](../appendix/web-util.md) 中查看这两个常量的作用，其目的是对浏览器的怪癖做兼容，具体在附录中都有讲到，并且这两个常量的类型都是布尔值。
 
 对于 `options.delimiters` 和 `options.comments`，其中 `options` 就是当前 `Vue` 实例的 `$options` 属性，并且 `delimiters` 和 `comments` 都是 `Vue` 提供的选项。所以这里只是简单的将这两个选项透传了过去。
 
@@ -265,7 +280,7 @@ if (cache[key]) {
 }
 ```
 
-首先定义常量 `key`，其值为一个字符串，我们知道 `options.delimiters` 是一个数组，如果 `options.delimiters` 存在，则使用 `String` 方法将其转换成字符串并与 `template` 拼接作为 `key` 的值，否则直接使用 `template` 字符串作为 `key` 的值，然后判断 `cache[key]` 是否存在，如果存在直接返回 `cache[key]`。这么做的目的是缓存字符串模板的编译结果，防止重复编译，提升性能，我们在看一下 `compileToFunctions` 函数的最后一句代码：
+首先定义常量 `key`，其值为一个字符串，我们知道 `options.delimiters` 是一个数组，如果 `options.delimiters` 存在，则使用 `String` 方法将其转换成字符串并与 `template` 拼接作为 `key` 的值，否则直接使用 `template` 字符串作为 `key` 的值，然后判断 `cache[key]` 是否存在，如果存在直接返回 `cache[key]`。这么做的目的是缓存字符串模板的编译结果，防止重复编译，提升性能，我们再看一下 `compileToFunctions` 函数的最后一句代码：
 
 ```js
 return (cache[key] = res)
@@ -339,7 +354,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 另外，这段代码也是运行在非生产环境的，且错误信息 `compiled.errors` 和提示信息 `compiled.tips` 都是数组，需要遍历打印，不同的是错误信息使用 `warn` 函数进行打印，而提示信息使用 `tip` 函数进行打印，其中 `tip` 函数也来自于 `core/util/debug.js` 文件。
 
-在往下是这样一段代码：
+再往下是这样一段代码：
 
 ```js
 // turn code into functions
@@ -351,7 +366,7 @@ res.staticRenderFns = compiled.staticRenderFns.map(code => {
 })
 ```
 
-定义了两个常量 `res` 以及 `fnGenErrors`，其中 `res` 是一个空对象且它就是最终的返回值，`fnGenErrors` 是一个空数组。然后在 `res` 对象上添加一个 `render` 属性，这个 `render` 属性，实际上就是最终生成的渲染函数，它的值是通过 `createFunction` 创建出来了，其中 `createFunction` 函数就定义在 `to-function.js` 文件的开头，源码如下：
+定义了两个常量 `res` 以及 `fnGenErrors`，其中 `res` 是一个空对象且它就是最终的返回值，`fnGenErrors` 是一个空数组。然后在 `res` 对象上添加一个 `render` 属性，这个 `render` 属性，实际上就是最终生成的渲染函数，它的值是通过 `createFunction` 创建出来的，其中 `createFunction` 函数就定义在 `to-function.js` 文件的开头，源码如下：
 
 ```js
 function createFunction (code, errors) {
@@ -380,7 +395,7 @@ res.staticRenderFns = compiled.staticRenderFns.map(code => {
 })
 ```
 
-由这段代码可知 `res.staticRenderFns` 是一个函数数组，是通过对 `compiled.staticRenderFns` 变量生成的，这说明：*`compiled` 除了包含 `render` 字符串外，还包含一个字符串数组 `staticRenderFns`，且这个字符串数组最终也通过 `createFunction` 转为函数。* `staticRenderFns` 的主要作用是渲染优化，我们后面详细讲解。
+由这段代码可知 `res.staticRenderFns` 是一个函数数组，是通过对 `compiled.staticRenderFns` 遍历生成的，这说明：*`compiled` 除了包含 `render` 字符串外，还包含一个字符串数组 `staticRenderFns`，且这个字符串数组最终也通过 `createFunction` 转为函数。* `staticRenderFns` 的主要作用是渲染优化，我们后面详细讲解。
 
 再接下来就是 `compileToFunctions` 函数的最后一段代码：
 
@@ -408,14 +423,14 @@ if (process.env.NODE_ENV !== 'production') {
 
 * 1、缓存编译结果，通过 `createCompileToFunctionFn` 函数内声明的 `cache` 常量实现。
 * 2、调用 `compile` 函数将模板字符串转成渲染函数字符串
-* 3、调用 `createFunction` 函数将渲染函数字符创转成真正的渲染函数
-* 4、打印编译错误，包括：模板字符串 -> 渲染函数字符 以及 渲染函数字符串 -> 渲染函数 这两个阶段的错误
+* 3、调用 `createFunction` 函数将渲染函数字符串转成真正的渲染函数
+* 4、打印编译错误，包括：模板字符串 -> 渲染函数字符串 以及 渲染函数字符串 -> 渲染函数 这两个阶段的错误
 
 最后，真正的 `模板字符串` 到 `渲染函数字符串` 的编译工作实际上是通过调用 `compile` 函数来完成的，所以接下来我们的任务就是弄清楚 `compile` 函数。
 
 ## compile 的作用
 
-回顾一下 `compileToFunctions` 函数中调用 `compile` 的方式：
+回顾一下 `src/compiler/to-function.js` 文件中的 `compileToFunctions` 函数调用 `compile` 函数的方式：
 
 ```js
 const compiled = compile(template, options)
@@ -433,7 +448,7 @@ const compiled = compile(template, options)
 }
 ```
 
-其中 `warn` 属性被 `delete` 操作符删除。这里只是给大家做一个简短的回顾，并且我们对 `Vue` 的编译器所接收的参数进行归纳，并整理了附录 [编译器选项整理](/note/附录/compiler-options)，后面遇到的任何编译器选项都会整理到该附录里，大家可以在这里查阅 `Vue` 编译器所接收的选项。
+其中 `warn` 属性被 `delete` 操作符删除。这里只是给大家做一个简短的回顾，并且我们对 `Vue` 的编译器所接收的参数进行归纳，并整理了附录 [编译器选项整理](../appendix/compiler-options.md)，后面遇到的任何编译器选项都会整理到该附录里，大家可以在这里查阅 `Vue` 编译器所接收的选项。
 
 知道了这些我们就可以去看 `compile` 函数的代码了，我们知道 `compile` 函数是 `createCompileToFunctionFn` 函数的形参，也就是说，`compile` 函数是被从其他地方传递过来了，其实前面我们都分析过，这里的 `compile` 函数就是 `src/compiler/create-compiler.js` 文件中定义在 `createCompiler` 函数内的 `compile` 函数，如下：
 
@@ -535,7 +550,7 @@ export default [
 ]
 ```
 
-以上是该文件的全部代码，可以发现 `modules` 实际上就是一个数组，数组有三个元素 `klass`、`style` 以及 `model`，且这三个元素来自于当前目录下的三个同名 `js` 文件。简单查看这三个文件的输出，如下：
+以上是该文件的全部代码，可以发现 `modules` 实际上就是一个数组，数组有三个元素 `klass`、`style` 以及 `model`，并且这三个元素来自于当前目录下的三个相应名称的 `js` 文件。简单查看这三个文件的输出，如下：
 
 ```js
 // klass.js 的输出
@@ -556,7 +571,7 @@ export default {
 }
 ```
 
-可以看到这三个文件输出的都是对象，且 `klass.js` 文件与 `style.js` 文件的输出基本相同，只有 `staticKeys` 字段有所区别，而 `model.js` 文件输出的对象只包含 `preTransformNode` 属性。最终 `platforms/web/compiler/modules/index.js` 文件将这三个文件的输出综合为一个数组进行输出，所以其输出的内容为：
+可以看到这三个文件输出的都是对象，且 `class.js` 文件与 `style.js` 文件的输出基本相同，只有 `staticKeys` 字段有所区别，而 `model.js` 文件输出的对象只包含 `preTransformNode` 属性。最终 `platforms/web/compiler/modules/index.js` 文件将这三个文件的输出综合为一个数组进行输出，所以其输出的内容为：
 
 ```js
 [
@@ -590,7 +605,7 @@ export default {
 }
 ```
 
-同样类似于 `modules` 输出，只不过 `directives` 最终输出的不是数组，而是一个对象，这个对象包含三个属性 `model`、`text` 以及 `html`，这三个属性同样来自于当前目前下的三个文件：`model.js`、`text.js` 以及 `html.js` 文件，我们分别查看这三个文件的输出：
+同样类似于 `modules` 输出，只不过 `directives` 最终输出的不是数组，而是一个对象，这个对象包含三个属性 `model`、`text` 以及 `html`，这三个属性同样来自于当前目录下的三个文件：`model.js`、`text.js` 以及 `html.js` 文件，我们分别查看这三个文件的输出：
 
 ```js
 // model.js 的输出
@@ -627,9 +642,9 @@ export default function text (el: ASTElement, dir: ASTDirective) {
 
 它是一个包含三个属性的对象，且属性的值都是函数。
 
-`baseOptions` 的第四个属性是 `isPreTag`，它是一个函数，可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看其实现讲解，其作用是通过给定的标签名字检查标签是否是 `'pre'` 标签。
+`baseOptions` 的第四个属性是 `isPreTag`，它是一个函数，可以在附录 [platforms/web/util 目录下的工具方法全解](../appendix/web-util.md) 中查看其实现讲解，其作用是通过给定的标签名字检查标签是否是 `'pre'` 标签。
 
-`baseOptions` 的第五个属性是 `isUnaryTag`，它来自于与 `options.js` 文件同级目录下的 `util.js` 文件，即 `src/platforms/web/compiler/util.js` 文件，再看这个文件，找到 `isUnaryTag` 如下：
+`baseOptions` 的第五个属性是 `isUnaryTag`，它来自于与 `options.js` 文件同级目录下的 `util.js` 文件，即 `src/platforms/web/compiler/util.js` 文件，打开这个文件，找到 `isUnaryTag` 如下：
 
 ```js
 export const isUnaryTag = makeMap(
@@ -640,7 +655,7 @@ export const isUnaryTag = makeMap(
 
 可以看到 `isUnaryTag` 是一个通过 `makeMap` 生成的函数，该函数的作用是检测给定的标签是否是一元标签。
 
-`baseOptions` 的第六个属性是 `mustUseProp`，它是一个函数，可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看其实现讲解，其作用是用来检测一个属性在标签中是否要使用 `props` 进行绑定。
+`baseOptions` 的第六个属性是 `mustUseProp`，它是一个函数，可以在附录 [platforms/web/util 目录下的工具方法全解](../appendix/web-util.md) 中查看其实现讲解，其作用是用来检测一个属性在标签中是否要使用 `props` 进行绑定。
 
 `baseOptions` 的第七个属性是 `canBeLeftOpenTag`，它也是一个函数，来自于 `src/platforms/web/compiler/util.js` 文件，源码如下：
 
@@ -654,11 +669,11 @@ export const canBeLeftOpenTag = makeMap(
 
 该函数也是一个使用 `makeMap` 生成的函数，它的作用是检测一个标签是否是那些虽然不是一元标签，但却可以自己补全并闭合的标签。比如 `p` 标签是一个双标签，你需要这样使用 `<p>Some content</p>`，但是你依然可以省略闭合标签，直接这样写：`<p>Some content`，且浏览器会自动补全。但是有些标签你不可以这样用，它们是严格的双标签。
 
-`baseOptions` 的第八个属性是 `isReservedTag`，它是一个函数，可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看其实现讲解，其作用是检查给定的标签是否是保留的标签。
+`baseOptions` 的第八个属性是 `isReservedTag`，它是一个函数，可以在附录 [platforms/web/util 目录下的工具方法全解](../appendix/web-util.md) 中查看其实现讲解，其作用是检查给定的标签是否是保留的标签。
 
-`baseOptions` 的第九个属性是 `getTagNamespace`，它也是一个函数，同样可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看其实现讲解，其作用是获取元素(标签)的命名空间。
+`baseOptions` 的第九个属性是 `getTagNamespace`，它也是一个函数，同样可以在附录 [platforms/web/util 目录下的工具方法全解](../appendix/web-util.md) 中查看其实现讲解，其作用是获取元素(标签)的命名空间。
 
-`baseOptions` 的第十个属性是 `staticKeys`，它的值是通过以 `modules` 为参数调用 `genStaticKeys` 函数的返回值得到的。其中 `modules` 就是 `baseOptions` 的第二个属性，而 `genStaticKeys` 来自于 `src/shared/util.js` 文件，大家可以在附录 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看该函数的讲解，其作用是根据编译器选项的 `modules` 选项生成一个静态键字符串。
+`baseOptions` 的第十个属性是 `staticKeys`，它的值是通过以 `modules` 为参数调用 `genStaticKeys` 函数的返回值得到的。其中 `modules` 就是 `baseOptions` 的第二个属性，而 `genStaticKeys` 来自于 `src/shared/util.js` 文件，大家可以在附录 [shared/util.js 文件工具方法全解](../appendix/shared-util.md) 中查看该函数的讲解，其作用是根据编译器选项的 `modules` 选项生成一个静态键字符串。
 
 现在我们已经弄清楚 `baseOptions` 对象的各个属性都是什么了，这些属性作为编译器的基本参数选项，但是我们还不清楚其各个属性的意义，比如 `modules` 数组和 `directives` 对象等，不过不急，随着后面的深入，这些疑惑都将慢慢解开。
 
@@ -730,7 +745,7 @@ if (options.directives) {
 }
 ```
 
-由于 `directives` 是对象而不是数组，所以不能采用与 `modules` 相同的处理方式，对于 `directives` 采用原型链的原理实现对扩展属性与基本属性。首先通过 `Object.create(baseOptions.directives || null)` 创建一个以 `baseOptions.directives` 对象为原型的新对象，然后使用 `extend` 方法将 `options.directives` 的属性混合到新创建出来的对象中，并将该对象作为 `finalOptions.directives` 的值。
+由于 `directives` 是对象而不是数组，所以不能采用与 `modules` 相同的处理方式，对于 `directives` 采用原型链的原理实现扩展属性对基本属性的覆盖。首先通过 `Object.create(baseOptions.directives || null)` 创建一个以 `baseOptions.directives` 对象为原型的新对象，然后使用 `extend` 方法将 `options.directives` 的属性混合到新创建出来的对象中，并将该对象作为 `finalOptions.directives` 的值。
 
 最后对于 `options` 中既不是 `modules` 又不是 `directives` 的其他属性，采用直接复制过去的方式进行处理：
 
@@ -749,7 +764,7 @@ for (const key in options) {
 const compiled = baseCompile(template, finalOptions)
 ```
 
-上面的代码调用了 `baseCompile` 函数，并分别将字符串模板(`template`)，以及最终的编译器选项(`finalOptions`)传递了过去。这说明什么？这说明 `compile` 函数对模板的编译是通过委托给 `baseCompile` 完成的。`baseCompile` 函数是 `createCompilerCreator` 函数的形参，是在 `src/compiler/index.js` 文件中调用 `createCompilerCreator` 创建 `'编译器创建者' 的创建者时` 传递过来的：
+上面的代码调用了 `baseCompile` 函数，并分别将字符串模板(`template`)，以及最终的编译器选项(`finalOptions`)传递了过去。这说明什么？这说明 `compile` 函数对模板的编译是委托 `baseCompile` 完成的。`baseCompile` 函数是 `createCompilerCreator` 函数的形参，是在 `src/compiler/index.js` 文件中调用 `createCompilerCreator` 创建 `'编译器创建者' 的创建者时` 传递过来的：
 
 ```js
 export const createCompiler = createCompilerCreator(function baseCompile (
@@ -797,17 +812,198 @@ return compiled
 
 补充：上面的分析中，我们并没有深入讲解 `detectErrors` 函数是如何根据抽象语法树(AST)检查模板中是否存在表达式错误的，这是因为现在对于大家来讲还不清楚抽象语法树的模样，且这并不会对大家的理解造成障碍，所以我们将这部分的讲解后移，等我们对 AST 心知肚明之后再来看这部分内容也不迟。
 
+## 理解编译器代码的组织方式
 
+如果你看到了这里，也许心里还有一个疑问，好好的代码为什么感觉如此繁琐。实际上你之所以会有繁琐的感觉，是因为你还没有理解源码为什么这么做的原因，当你明白了源码的动机之后就不会有这种感觉了。而本节的内容就是让你进一步理解为什么这样创建编译器。
 
+首先我们来看一下 `Vue` 源码中编译器的目录结构：
 
+```
+├── src
+│   ├── compiler -------------------------- 编译器代码的存放目录
+│   ├── ├── codegen ----------------------- 根据AST生成目标平台代码
+│   ├── ├── parser ------------------------ 解析原始代码并生成AST
+```
 
+如上目录结构中有两个比较重要的目录，一个是 `codegen` 目录，另一个是 `parser` 目录。其中 `parser` 目录内主要会导出一个叫做 `parse` 的函数，该函数是一个解析器，它的作用是将模板字符串解析为对应的抽象语法树(`AST`)，通常我们会像如下代码这样使用 `parse` 函数：
 
+```js
+// 从 parser 目录下的 index.js 文件中导入 parse 函数
+import { parse } from './parser/index'
 
+// 使用 parse 函数将模板解析为 AST
+const ast = parse(template.trim(), options)
+```
 
+有了 `AST` 之后我们就可以根据这个 `AST` 生成不同平台的目标代码，而 `codegen` 目录内的代码就是用来做这件事情的，`codegen` 目录内的代码会导出一个叫做 `generate` 的函数，这个函数的作用就是根据给定的AST生成最终的目标平台的代码，通常我们会像如下代码这样使用 `generate` 函数：
 
+```js
+// 从 codegen 目录下的 index.js 文件中导入 generate 函数
+import { generate } from './codegen/index'
 
+// 根据给定的AST生成目标平台的代码
+const code = generate(ast, options)
+```
 
+有了这些我们就可以封装一个编译器函数供外部使用：
 
+```js
+export function myCompiler (template: string, options: CompilerOptions) {
+  const ast = parse(template.trim(), options)
+  const code = generate(ast, options)
 
+  return code
+}
+```
 
+当然了，在编译的过程中可能会收集一些错误，我们还需要对错误进行处理，所以我们可能会在上面的代码中添加一些用来处理编译错误的代码：
 
+```js {5}
+export function myCompiler (template: string, options: CompilerOptions) {
+  const ast = parse(template.trim(), options)
+  const code = generate(ast, options)
+
+  // 一些处理编译错误的代码
+
+  return code
+}
+```
+
+这样我们封装的 `myCompiler` 函数就可以导出供给其他部分的代码使用了，假设我们的 `myCompiler` 函数用来将模板编译为可以在 `web` 平台下运行的代码，但是突然有一天你想要根据同样的AST生成其他平台的代码，这时你可以选择再创建一个函数，假设它叫 `otherCompiler`：
+
+```js {3}
+export function otherCompiler (template: string, options: CompilerOptions) {
+  const ast = parse(template.trim(), options)
+  const code = otherGenerate(ast, options)
+
+  // 一些处理编译错误的代码
+
+  return code
+}
+```
+
+如上高亮的代码所示，既然要生成其他平台的代码，那么代码生成部分就需要重写，比如上面的代码中我们使用 `otherGenerate` 函数代替了原来的 `generate` 函数。但是AST还是原来的AST，并且用来处理编译错误的代码可能也不会变动，这时 `myCompiler` 函数和 `otherCompiler` 函数中就存在了冗余的代码，为了解决这个问题，我们可以封装一个叫做 `createCompilerCreator` 函数，把通用的代码封装起来，如下：
+
+```js
+function createCompilerCreator (baseCompile) {
+  return function customCompiler (template: string, options: CompilerOptions) {
+
+    // 一些处理编译错误的代码
+
+    return baseCompile(template, options)
+  }
+}
+```
+
+这样我们就可以使用 `createCompilerCreator` 函数创建出针对于不同平台的编译器了，如下代码所示：
+
+```js
+// 创建 web 平台的编译器
+const webCompiler = createCompilerCreator(function baseCompile (template, options) {
+  const ast = parse(template.trim(), options)
+  const code = generate(ast, options)
+  return code
+})
+
+// 创建其他平台的编译器
+const otherCompiler = createCompilerCreator(function baseCompile (template, options) {
+  const ast = parse(template.trim(), options)
+  const code = otherGenerate(ast, options)
+  return code
+})
+```
+
+看到这里相信聪明的你已经明白了为什么会有 `src/compiler/create-compiler.js` 文件的存在，以及它的作用，实际上该文件中的 `createCompilerCreator` 函数与我们如上例子中的 `createCompilerCreator` 函数作用一致。
+
+现在我们再来看 `src/compiler/index.js` 文件中的如下这段代码：
+
+```js
+export const createCompiler = createCompilerCreator(function baseCompile (
+  template: string,
+  options: CompilerOptions
+): CompiledResult {
+  const ast = parse(template.trim(), options)
+  if (options.optimize !== false) {
+    optimize(ast, options)
+  }
+  const code = generate(ast, options)
+  return {
+    ast,
+    render: code.render,
+    staticRenderFns: code.staticRenderFns
+  }
+})
+```
+
+实际上这段代码所创建的就是 `web` 平台下的编译器，大家可以打开 `src/server/optimizing-compiler/index.js` 文件，你会看到如下这段代码：
+
+```js
+export const createCompiler = createCompilerCreator(function baseCompile (
+  template: string,
+  options: CompilerOptions
+): CompiledResult {
+  const ast = parse(template.trim(), options)
+  optimize(ast, options)
+  const code = generate(ast, options)
+  return {
+    ast,
+    render: code.render,
+    staticRenderFns: code.staticRenderFns
+  }
+})
+```
+
+而这段代码是用来创建服务端渲染环境的编译器，注意如上代码中的 `generate` 函数和 `optimize` 函数已经是来自 `src/server` 目录下的相关文件了。
+
+另外与我们前面举的例子不同，`/src/compiler/create-compiler.js` 文件中的 `createCompilerCreator` 函数所返回的函数接收的参数是 `baseOptions`，所以 `src/compiler/index.js` 文件中导出的 `createCompiler` 函数就会接收 `baseOptions` 参数，这就是为什么在 `src/platforms/web/compiler/index.js` 会像如下这样调用 `createCompiler` 函数：
+
+```js
+const { compile, compileToFunctions } = createCompiler(baseOptions)
+```
+
+如上代码中传递的 `baseOptions` 将作为编译器的基本参数，另外我们注意如上代码中 `createCompiler` 函数的返回值，它返回的是一个对象，对象中包含两个元素，分别是 `compile` 和 `compileToFunctions`，实际上 `compile` 函数与 `compileToFunctions` 函数的区别就在于 **`compile` 函数生成的是字符串形式的代码，而 `compileToFunctions` 生成的才是真正可执行的代码**，并且 `compileToFunctions` 函数本身是使用 `src/compiler/to-function.js` 文件中的 `createCompileToFunctionFn` 函数根据 `compile` 生成的：
+
+```js
+return {
+  compile,
+  compileToFunctions: createCompileToFunctionFn(compile)
+}
+```
+
+而且 `compileToFunctions` 函数中调用了 `compile` 函数，如下：
+
+```js {12}
+export function createCompileToFunctionFn (compile: Function): Function {
+  const cache = Object.create(null)
+
+  return function compileToFunctions (
+    template: string,
+    options?: CompilerOptions,
+    vm?: Component
+  ): CompiledFunctionResult {
+    
+    // compile
+    const compiled = compile(template, options)
+
+  }
+}
+```
+
+如上高亮的代码所示，在调用 `compile` 函数时传递了 `template` 参数和 `options` 参数。这两个参数都是通过 `compileToFunctions` 函数传递过来的。我们找到 `src/platforms/web/entry-runtime-with-compiler.js` 文件，注意如下代码：
+
+```js
+const { render, staticRenderFns } = compileToFunctions(template, {
+  shouldDecodeNewlines,
+  shouldDecodeNewlinesForHref,
+  delimiters: options.delimiters,
+  comments: options.comments
+}, this)
+```
+
+大家注意如上代码中调用 `compileToFunctions` 函数时传递的第二个选项参数，还记得在 `src/platforms/web/compiler/index.js` 中创建 `compileToFunctions` 函数时传递的基本选项吗：
+
+```js
+const { compile, compileToFunctions } = createCompiler(baseOptions)
+```
+
+所以看到这里，你应该知道的是：**在创建编译器的时候传递了基本编译器选项参数，当真正使用编译器编译模板时，依然可以传递编译器选项，并且新的选项和基本选项会以合适的方式融合或覆盖**。

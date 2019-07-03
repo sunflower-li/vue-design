@@ -55,7 +55,7 @@ const classify = str => str
   .replace(/[-_]/g, '')
 ```
 
-其中 `hasConsole` 用来检测宿主环境的 `console` 是否可用，`classifyRE` 是一个正则表达式：`/(?:^|[-_])(\w)/g`，用于 `classify` 函数，`classify` 函数的作用是将一个字符串的首字母以及中横线转为驼峰的，代码很简单相信大家都能看得懂，`classify` 的使用如下：
+其中 `hasConsole` 用来检测宿主环境的 `console` 是否可用，`classifyRE` 是一个正则表达式：`/(?:^|[-_])(\w)/g`，用于 `classify` 函数，`classify` 函数的作用是将一个字符串的首字母以及中横线转为驼峰，代码很简单相信大家都能看得懂，`classify` 的使用如下：
 
 ```js
 console.log(classify('aaa-bbb-ccc')) // AaaBbbCcc
@@ -80,6 +80,32 @@ export const inBrowser = typeof window !== 'undefined'
 * 描述：检测当前宿主环境是否是浏览器
 
 * 源码解析：通过判断 `window` 对象是否存在即可
+
+### UA
+
+源码如下：
+
+```js
+export const UA = inBrowser && window.navigator.userAgent.toLowerCase()
+```
+
+* 描述：获取当浏览器的 `user Agent`，简称 `UA`。
+
+* 源码解析：首先使用 `inBrowser` 检测当前宿主环境是否是浏览器，如果是则通过 `window.navigator.userAgent.toLowerCase()` 获取当前浏览器的 `UA` 字符串，并将该字符串小写化之后赋值给 `UA` 常量。
+
+### isIE
+
+源码如下：
+
+```js
+export const isIE = UA && /msie|trident/.test(UA)
+```
+
+* 描述：判断当前浏览器是否是 `Internet Explorer` 浏览器。
+
+* 源码解析：
+
+大家可以访问这里 [Internet Explorer User Agent Strings](http://useragentstring.com/pages/useragentstring.php?name=Internet+Explorer) 查看 `IE2` 到 `IE11` 所有版本的用户代理字符串，我们能够发现在这些 `UA` 字符串中必然包含 `'trident'` 或者 `'msie'` 这两个字符串。所以只需要使用正则去匹配 `UA` 中是否包含这两个字符串即可判断是否为 `IE` 浏览器。
 
 ### hasProto
 
@@ -149,6 +175,22 @@ global['process'].env.VUE_ENV === 'server'
 是否成立，其中 `global['process'.env.VUE_ENV]` 是 `vue-server-renderer` 注入的。如果成立那么说明是服务端渲染。如果上面的条件有一项不成立，那么都不认为是服务端渲染。
 
 注意，在 `isServerRendering` 中使用全局变量 `_isServer` 保存了最终的值，如果发现 `_isServer` 有定义，那么就不会重新计算，从而提升性能。毕竟环境是不会改变的，只需要求值一次即可。
+
+### hasSymbol
+
+源码如下：
+
+```js
+export const hasSymbol =
+  typeof Symbol !== 'undefined' && isNative(Symbol) &&
+  typeof Reflect !== 'undefined' && isNative(Reflect.ownKeys)
+```
+
+* 描述：`hasSymbol` 常量是一个布尔值，用来判断当前宿主环境是否支持原生 `Symbol` 和 `Reflect.ownKeys` 的可用性。
+
+* 源码解析：
+
+首先判断 `Symbol` 和 `Reflect` 是否存在，并使用 `isNative` 函数保证 `Symbol` 与 `Reflect.ownKeys` 全部是原生定义。
 
 ## error.js 文件代码说明
 
@@ -275,7 +317,7 @@ function logError (err, vm, info) {
 
 可以看到，在非生产环境下，先使用 `warn` 函数报一个警告，然后判断是否在浏览器或者Weex环境且 `console` 是否可用，如果可用则使用 `console.error` 打印错误，没有则直接 `throw err`。
 
-所以 `logError` 才真正打印错误的函数，且实现也比较简单。这其实已经达到了 `handleError` 的目的了，但是大家注意我们此时忽略了一段代码，就是 `handleError` 函数开头的一段代码：
+所以 `logError` 才是真正打印错误的函数，且实现也比较简单。这其实已经达到了 `handleError` 的目的了，但是大家注意我们此时忽略了一段代码，就是 `handleError` 函数开头的一段代码：
 
 ```js
 if (vm) {
@@ -367,7 +409,7 @@ if (vm) {
 while ((cur = cur.$parent))
 ```
 
-这是一个链表遍历嘛，逐层寻找父级组件，如果父级组件使用了 `errorCaptured` 选项，则调用之，就怎么简单。当然啦，作为生命周期钩子，`errorCaptured` 选项在内部时以一个数组的形式存在的，所以需要 `for` 循环遍历，另外钩子执行的语句是被包裹在 `try catch` 语句块中的。
+这是一个链表遍历嘛，逐层寻找父级组件，如果父级组件使用了 `errorCaptured` 选项，则调用之，就怎么简单。当然啦，作为生命周期钩子，`errorCaptured` 选项在内部是以一个数组的形式存在的，所以需要 `for` 循环遍历，另外钩子执行的语句是被包裹在 `try catch` 语句块中的。
 
 这里有两点需要注意：
 
@@ -378,7 +420,7 @@ while ((cur = cur.$parent))
 if (capture) return
 ```
 
-其中 `capture` 是钩子调用的返回值与 `false` 的全等比较的结果，也就是说，如果 `errorCaptured` 钩子函数返回假，那么 `capture` 为真直接 `return`，程序不会走 `if` 语句块后面的 `globalHandleError`，否则除了 `errorCaptured` 被调用外，`if` 语句块后面的 `globalHandleError` 也会被调用。最总要的是：如果 `errorCaptured` 钩子函数返回假将阻止错误继续向“上级”传递。
+其中 `capture` 是钩子调用的返回值与 `false` 做全等比较的结果，也就是说，如果 `errorCaptured` 钩子函数返回假，那么 `capture` 为真直接 `return`，程序不会走 `if` 语句块后面的 `globalHandleError`，否则除了 `errorCaptured` 被调用外，`if` 语句块后面的 `globalHandleError` 也会被调用。最重要的是：如果 `errorCaptured` 钩子函数返回假将阻止错误继续向“上级”传递。
 
 ## lang.js 文件代码说明
 
@@ -396,7 +438,7 @@ export function isReserved (str: string): boolean {
 }
 ```
 
-* 描述：`isReserved` 函数用来检测一个字符串是否以 `$` 或者 `_` 开头，主要用来判断一个字段的键名是否保留的，比如在 `Vue` 中不允许使用以 `$` 或 `_` 开头的字符串作为 `data` 数据的字段名，如：
+* 描述：`isReserved` 函数用来检测一个字符串是否以 `$` 或者 `_` 开头，主要用来判断一个字段的键名是否是保留的，比如在 `Vue` 中不允许使用以 `$` 或 `_` 开头的字符串作为 `data` 数据的字段名，如：
 
 ```js
 new Vue({
@@ -409,7 +451,7 @@ new Vue({
 
 * 源码分析：
 
-判断一个字符串是否以 `$` 或 `_` 开头还是比较容易的，只不过 `isReserved` 函数的实现方式是通过字符串的 `charCodeAt` 方法获得该字符串第一个字符串的 `unicode`，然后与 `0x24` 和 `0x5F` 作比较。其中 `$` 对应的 `unicode` 码为 `36`，对应的十六进制值为 `0x24`；`_` 对应的 `unicode` 码为 `95`，对应的十六进制值为 `0x5F`。有的同学可能会有疑问为什么不直接用字符 `$` 和 `_` 作比较，而是用这两个字符对应的 `unicode` 码作比较，其实无论哪种比较方法差别不大，看作者更倾向于哪一种。
+判断一个字符串是否以 `$` 或 `_` 开头还是比较容易的，只不过 `isReserved` 函数的实现方式是通过字符串的 `charCodeAt` 方法获得该字符串第一个字符的 `unicode`，然后与 `0x24` 和 `0x5F` 作比较。其中 `$` 对应的 `unicode` 码为 `36`，对应的十六进制值为 `0x24`；`_` 对应的 `unicode` 码为 `95`，对应的十六进制值为 `0x5F`。有的同学可能会有疑问为什么不直接用字符 `$` 和 `_` 作比较，而是用这两个字符对应的 `unicode` 码作比较，其实无论哪种比较方法差别不大，看作者更倾向于哪一种。
 
 ### def
 
@@ -441,7 +483,7 @@ export function def (obj: Object, key: string, val: any, enumerable?: boolean) {
 
 ## options.js 文件代码说明
 
-*该文件的讲解集中在 [4Vue选项的规范化](/note/4Vue选项的规范化) 以及 [5Vue选项的合并](/note/5Vue选项的合并) 这两个小节中*。
+* 该文件的讲解集中在 [Vue选项的规范化](../art/4vue-normalize.md) 以及 [Vue选项的合并](../art/5vue-merge.md) 这两个小节中。
 
 ## perf.js 文件代码说明
 
@@ -484,7 +526,7 @@ if (process.env.NODE_ENV !== 'production') {
 const perf = inBrowser && window.performance
 ```
 
-如果在浏览器环境，那么 `perf` 的值就是 `window.performance`，否则为 `false`，然后做了一些列判断，目的是确定 `performance` 的接口可用，如果都可用，那么将初始化 `mark` 和 `measure` 变量。
+如果在浏览器环境，那么 `perf` 的值就是 `window.performance`，否则为 `false`，然后做了一系列判断，目的是确定 `performance` 的接口可用，如果都可用，那么将初始化 `mark` 和 `measure` 变量。
 
 首先看 `mark`：
 

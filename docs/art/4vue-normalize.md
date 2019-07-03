@@ -1,6 +1,6 @@
 # Vue 选项的规范化
 
-<p class="tip">注意：本节中当我们提到“以我们的例子为例”的时候，这里的“我们的例子”指的是《Vue的思路之以一个例子为线索》中的例子</p>
+<p class="tip">注意：本节讨论依旧沿用前文的例子</p>
 
 ## 弄清楚传递给 mergeOptions 函数的三个参数
 
@@ -48,7 +48,7 @@ export function resolveConstructorOptions (Ctor: Class<Component>) {
 }
 ```
 
-在具体去看代码之前，大家能否通过这个函数的名字猜一猜这个函数的作用呢？其名字 `resolve Constructor Options` 那么这个函数是不是用来*解析构造者的 `options`*的呢？答案是：对，就是干这个的。接下来我们就具体看一下它是怎么做的，首先第一句：
+在具体去看代码之前，大家能否通过这个函数的名字猜一猜这个函数的作用呢？其名字是 `resolve Constructor Options` 那么这个函数是不是用来 *解析构造者的 `options`* 的呢？答案是：对，就是干这个的。接下来我们就具体看一下它是怎么做的，首先第一句：
 
 ```js
 let options = Ctor.options
@@ -69,9 +69,9 @@ const s = new Sub()
 return options
 ```
 
-也就是把 `Vue.options` 返回回去了，所以这个函数的确就像他的名字那样，用来获取构造者的 `options` 的。不过同学们可能注意到了，`resolveConstructorOptions` 函数的第一句和最后一句代码中间还有一坨包裹在 `if` 语句块中的代码，那么这坨代码是干什么的呢？
+也就是把 `Vue.options` 返回回去了，所以这个函数的确就像他的名字那样，是用来获取构造者的 `options` 的。不过同学们可能注意到了，`resolveConstructorOptions` 函数的第一句和最后一句代码中间还有一坨包裹在 `if` 语句块中的代码，那么这坨代码是干什么的呢？
 
-我可以很明确的告诉大家，这里水稍微有那么点深，比如 `if` 语句的判断条件 `Ctor.super`，`super` 这是子类才有的属性，如下：
+我可以很明确地告诉大家，这里水稍微有那么点深，比如 `if` 语句的判断条件 `Ctor.super`，`super` 这是子类才有的属性，如下：
 
 ```js
 const Sub = Vue.extend()
@@ -84,7 +84,7 @@ console.log(Sub.super)  // Vue
 const superOptions = resolveConstructorOptions(Ctor.super)
 ```
 
-我们发现，又递归的调用了 `resolveConstructorOptions` 函数，只不过此时的参数是构造者的父类，之后的代码中，还有一些关于父类的 `options` 属性是否被改变过的判断和操作，并且大家注意这句代码：
+我们发现，又递归地调用了 `resolveConstructorOptions` 函数，只不过此时的参数是构造者的父类，之后的代码中，还有一些关于父类的 `options` 属性是否被改变过的判断和操作，并且大家注意这句代码：
 
 ```js
 // check if there are any late-modified/attached options (#4976)
@@ -93,7 +93,7 @@ const modifiedOptions = resolveModifiedOptions(Ctor)
 
 我们要注意的是注释，有兴趣的同学可以根据注释中括号内的 `issue` 索引去搜一下相关的问题，这句代码是用来解决使用 `vue-hot-reload-api` 或者 `vue-loader` 时产生的一个 `bug` 的。
 
-现在大家知道这里的水有多深了吗？关于这些问题，我们在将 `Vue.extend` 中都会给大家一一解答，不过有一个因素从来没有变，那就是 `resolveConstructorOptions` 这个函数的作用永远都是用来获取当前实例构造者的 `options` 属性的，即使 `if` 判断分支内也不例外，因为 `if` 分支只不过是处理了 `options`，最终返回的永远都是 `options`。
+现在大家知道这里的水有多深了吗？关于这些问题，我们在讲 `Vue.extend` 时都会给大家一一解答，不过有一个因素从来没有变，那就是 `resolveConstructorOptions` 这个函数的作用永远都是用来获取当前实例构造者的 `options` 属性的，即使 `if` 判断分支内也不例外，因为 `if` 分支只不过是处理了 `options`，最终返回的永远都是 `options`。
 
 所以根据我们的例子，`resolveConstructorOptions` 函数目前并不会走 `if` 判断分支，即此时这个函数相当于：
 
@@ -104,7 +104,7 @@ export function resolveConstructorOptions (Ctor: Class<Component>) {
 }
 ```
 
-所以，根据我们的例子，此时的 `mergeOptions` 函数的第一个参数就是 `Vue.options`，那么大家还记得 `Vue.options` 长成什么样子吗？不记得也没关系，这就得益于我们整理的 [附录/Vue构造函数整理-全局API](/note/附录/Vue构造函数整理-全局API) 了，通过查看我们可知 `Vue.options` 如下：
+所以，根据我们的例子，此时的 `mergeOptions` 函数的第一个参数就是 `Vue.options`，那么大家还记得 `Vue.options` 长成什么样子吗？不记得也没关系，这就得益于我们整理的 [附录/Vue构造函数整理-全局API](../appendix/vue-global-api.md) 了，通过查看我们可知 `Vue.options` 如下：
 
 ```js
 Vue.options = {
@@ -235,7 +235,7 @@ export function validateComponentName (name: string) {
 
 对于第一条规则，`Vue` 限定组件的名字由普通的字符和中横线(-)组成，且必须以字母开头。
 
-对于第二条规则，首先将 `options.components` 对象的 `key` 小写化作为组件的名字，然后以组件的名字为参数分别调用两个方法：`isBuiltInTag` 和 `config.isReservedTag`，其中 `isBuiltInTag` 方法的作用是用来检测你所注册的组件是否是内置的标签，这个方法可以在 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看其实现，于是我们可知：`slot` 和 `component` 这个两个名字被 `Vue` 作为内置标签而存在的，你是不能够使用的，比如这样：
+对于第二条规则，首先将 `options.components` 对象的 `key` 小写化作为组件的名字，然后以组件的名字为参数分别调用两个方法：`isBuiltInTag` 和 `config.isReservedTag`，其中 `isBuiltInTag` 方法的作用是用来检测你所注册的组件是否是内置的标签，这个方法可以在 [shared/util.js 文件工具方法全解](../appendix/shared-util.md) 中查看其实现，于是我们可知：`slot` 和 `component` 这两个名字被 `Vue` 作为内置标签而存在的，你是不能够使用的，比如这样：
 
 ```js
 new Vue({
@@ -266,7 +266,7 @@ Vue.config.isUnknownElement = isUnknownElement
 Vue.config.isReservedTag = isReservedTag
 ```
 
-就是在给 `config.isReservedTag` 赋值，其值为来自于 `platforms/web/util/element.js` 文件的 `isReservedTag` 函数，大家可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看该方法的作用及实现，可知在 `Vue` 中 `html` 标签和部分 `SVG` 标签被认为是保留的。所以这段代码是在保证选项被合并前的合理合法。最后大家注意一点，这些工作是在非生产环境下做的，所以在非生产环境下开发者就能够发现并修正这些问题，所以在生产环境下就不需要再重复做一次校验检测了。
+就是在给 `config.isReservedTag` 赋值，其值为来自于 `platforms/web/util/element.js` 文件的 `isReservedTag` 函数，大家可以在附录 [platforms/web/util 目录下的工具方法全解](../appendix/web-util.md) 中查看该方法的作用及实现，可知在 `Vue` 中 `html` 标签和部分 `SVG` 标签被认为是保留的。所以这段代码是在保证选项被合并前的合理合法。最后大家注意一点，这些工作是在非生产环境下做的，所以在非生产环境下开发者就能够发现并修正这些问题，所以在生产环境下就不需要再重复做一次校验检测了。
 
 另外要说一点，我们的例子中并没有使用 `components` 选项，但是这里还是给大家顺便介绍了一下。如果按照我们的例子的话，`mergeOptions` 函数中的很多代码都不会执行，但是为了保证让大家理解整个选项合并所做的事情，这里都会有所介绍。
 
@@ -346,7 +346,7 @@ function normalizeProps (options: Object, vm: ?Component) {
         ? val
         : { type: val }
     }
-  } else if (process.env.NODE_ENV !== 'production' && props) {
+  } else if (process.env.NODE_ENV !== 'production') {
     warn(
       `Invalid value for option "props": expected an Array or an Object, ` +
       `but got ${toRawType(props)}.`,
@@ -419,7 +419,7 @@ let i, val, name
 options.props = res
 ```
 
-然后开始了判断分支，这个判断分支就是用来区分开发者在使用 `props` 时，到底是使用字符串数组的写法还是使用纯对象的写法的，我们先看纯数组的情况：
+然后开始了判断分支，这个判断分支就是用来区分开发者在使用 `props` 时，到底是使用字符串数组的写法还是使用纯对象的写法的，我们先看字符串数组的情况：
 
 ```js
 if (Array.isArray(props)) {
@@ -457,7 +457,7 @@ name = camelize(val)
 res[name] = { type: null }
 ```
 
-首先将数组的元素传递给 `camelize` 函数，这个函数来自于 `shared/util.js` 文件，可以在附录 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看详细解析，这个函数的作用是将中横线转驼峰。
+首先将数组的元素传递给 `camelize` 函数，这个函数来自于 `shared/util.js` 文件，可以在附录 [shared/util.js 文件工具方法全解](../appendix/shared-util.md) 中查看详细解析，这个函数的作用是将中横线转驼峰。
 
 然后在 `res` 对象上添加了与转驼峰后的 `props` 同名的属性，其值为 `{ type: null }`，这就是实现了对字符串数组的规范化，将其规范为对象的写法，只不过 `type` 的值为 `null`。
 
@@ -474,14 +474,14 @@ if (Array.isArray(props)) {
       ? val
       : { type: val }
   }
-} else if (process.env.NODE_ENV !== 'production' && props) {
+} else if (process.env.NODE_ENV !== 'production') {
   ...
 }
 ```
 
-首先使用 `isPlainObject` 函数判断 `props` 是否是一个纯的对象，其中 `isPlainObject` 函数来自于 `shared/util.js` 文件，可以在附录 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看详细解析。
+首先使用 `isPlainObject` 函数判断 `props` 是否是一个纯的对象，其中 `isPlainObject` 函数来自于 `shared/util.js` 文件，可以在附录 [shared/util.js 文件工具方法全解](../appendix/shared-util.md) 中查看详细解析。
 
-如果是一个纯对象，也是需要规范化的，我们知道即使是纯对象也是有两种写法的如下：
+如果是一个纯对象，也是需要规范化的，我们知道即使是纯对象也是有两种写法的，如下：
 
 ```js
 props: {
@@ -505,7 +505,7 @@ res[name] = isPlainObject(val)
 
 这样就实现了对纯对象语法的规范化。
 
-最后还有一个判断分支，即当你传递了 `props` 选项，但其值既不是数组又不是纯对象的时候，则会给你一个警告：
+最后还有一个判断分支，即当你传递了 `props` 选项，但其值既不是字符串数组又不是纯对象的时候，会给你一个警告：
 
 ```js
 if (Array.isArray(props)) {
@@ -546,7 +546,7 @@ function normalizeInject (options: Object, vm: ?Component) {
         ? extend({ from: key }, val)
         : { from: val }
     }
-  } else if (process.env.NODE_ENV !== 'production' && inject) {
+  } else if (process.env.NODE_ENV !== 'production') {
     warn(
       `Invalid value for option "inject": expected an Array or an Object, ` +
       `but got ${toRawType(inject)}.`,
@@ -617,7 +617,7 @@ if (Array.isArray(inject)) {
   }
 } else if (isPlainObject(inject)) {
   ...
-} else if (process.env.NODE_ENV !== 'production' && inject) {
+} else if (process.env.NODE_ENV !== 'production') {
   ...
 }
 ```
@@ -651,12 +651,12 @@ if (Array.isArray(inject)) {
       ? extend({ from: key }, val)
       : { from: val }
   }
-} else if (process.env.NODE_ENV !== 'production' && inject) {
+} else if (process.env.NODE_ENV !== 'production') {
   ...
 }
 ```
 
-有的同学可能会问：`normalized` 函数的目的不就将 `inject` 选项规范化为对象结构吗？那既然已经是对象了还规范什么呢？那是因为我们期望得到的对象是这样的：
+有的同学可能会问：`normalized` 函数的目的不就是将 `inject` 选项规范化为对象结构吗？那既然已经是对象了还规范什么呢？那是因为我们期望得到的对象是这样的：
 
 ```js
 inject: {
@@ -708,7 +708,7 @@ if (Array.isArray(inject)) {
   ...
 } else if (isPlainObject(inject)) {
   ...
-} else if (process.env.NODE_ENV !== 'production' && inject) {
+} else if (process.env.NODE_ENV !== 'production') {
   warn(
     `Invalid value for option "inject": expected an Array or an Object, ` +
     `but got ${toRawType(inject)}.`,
@@ -773,9 +773,9 @@ for (const key in dirs) {
 }
 ```
 
-注意 `if` 判断语句，当发现你注册的指令是一个函数的时候，则将该函数作为对象形式的 `bind` 属性和 `update` 属性的值。也就是说，可以把使用函数语法注册组件的方式理解为一种简写。
+注意 `if` 判断语句，当发现你注册的指令是一个函数的时候，则将该函数作为对象形式的 `bind` 属性和 `update` 属性的值。也就是说，可以把使用函数语法注册指令的方式理解为一种简写。
 
-这样，我们就彻底了解了这三个用于规范化选项的函数的作用了，相信通过上面的介绍，大家对 `props`、`inject` 以及 `directives` 这三个选项会有一个新的认识。知道了 `Vue` 是如何做到允许我们采用多种写法，也知道了 `Vue` 是如何统一处理的，这也算是看源码的收货之一吧。
+这样，我们就彻底了解了这三个用于规范化选项的函数的作用了，相信通过上面的介绍，大家对 `props`、`inject` 以及 `directives` 这三个选项会有一个新的认识。知道了 `Vue` 是如何做到允许我们采用多种写法，也知道了 `Vue` 是如何统一处理的，这也算是看源码的收获之一吧。
 
 看完了 `mergeOptions` 函数里的三个规范化函数之后，我们继续看后面的代码，接下来是这样一段代码：
 
@@ -793,29 +793,8 @@ if (child.mixins) {
 
 很显然，这段代码是处理 `extends` 选项和 `mixins` 选项的，首先使用变量 `extendsFrom` 保存了对 `child.extends` 的引用，之后的处理都是用 `extendsFrom` 来做，然后判断 `extendsFrom` 是否为真，即 `child.extends` 是否存在，如果存在的话就递归调用 `mergeOptions` 函数将 `parent` 与 `extendsFrom` 进行合并，并将结果作为新的 `parent`。这里要注意，我们之前说过 `mergeOptions` 函数将会产生一个新的对象，所以此时的 `parent` 已经被新的对象重新赋值了。
 
-接着检测是否 `child.mixins` 选项是否存在，如果存在则使用同样的方式进行操作，不同的是，由于 `mixins` 是一个数组所以要遍历一下。
+接着检测 `child.mixins` 选项是否存在，如果存在则使用同样的方式进行操作，不同的是，由于 `mixins` 是一个数组所以要遍历一下。
 
 经过了上面两个判断分支，此时的 `parent` 很可能已经不是当初的 `parent` 的，而是经过合并后产生的新对象。关于 `extends` 与 `mixins` 的更多东西以及这里递归调用 `mergeOptions` 所产生的影响，等我们看完整个 `mergeOptions` 函数对选项的处理之后会更容易理解，因为现在我们还不清楚 `mergeOptions` 到底怎么合并选项，等我们了解了 `mergeOptions` 的作用之后再回头来看一下这段代码。
 
 到目前为止我们所看到的 `mergeOptions` 的代码，还都是对选项的规范化，或者说的明显一点：现在所做的事儿还都在对 `parent` 以及 `child` 进行预处理，而这是接下来合并选项的必要步骤。
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

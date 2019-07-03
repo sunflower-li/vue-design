@@ -35,7 +35,7 @@ for (key in parent) {
 ```js
 Vue.options = {
   components: {
-      KeepAlive
+      KeepAlive,
       Transition,
       TransitionGroup
   },
@@ -66,7 +66,7 @@ for (key in child) {
 if (!hasOwn(parent, key))
 ```
 
-其中 `hasOwn` 函数来自于 `shared/util.js` 文件，可以在 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看其详解，其作用是用来判断一个属性是否是对象自身的属性(不包括原型上的)。所以这个判断语句的意思是，如果 `child` 对象的键也在 `parent` 上出现，那么就不要再调用 `mergeField` 的了，因为在上一个 `for in` 循环中已经调用过了，这就避免了重复调用。
+其中 `hasOwn` 函数来自于 `shared/util.js` 文件，可以在 [shared/util.js 文件工具方法全解](../appendix/shared-util.md) 中查看其详解，其作用是用来判断一个属性是否是对象自身的属性(不包括原型上的)。所以这个判断语句的意思是，如果 `child` 对象的键也在 `parent` 上出现，那么就不要再调用 `mergeField` 了，因为在上一个 `for in` 循环中已经调用过了，这就避免了重复调用。
 
 总之这两个 `for in` 循环的目的就是使用在 `parent` 或者 `child` 对象中出现的 `key(即选项的名字)` 作为参数调用 `mergeField` 函数，真正合并的操作实际在 `mergeField` 函数中。
 
@@ -79,9 +79,9 @@ function mergeField (key) {
 }
 ```
 
-`mergeField` 函数只有两句代码，第一句代码定义了一个常量 `start`，它的值是通过指定的 `key` 访问 `strats` 对象得到的，而当访问的属性不存在时，则使用 `defaultStrat` 作为值。
+`mergeField` 函数只有两句代码，第一句代码定义了一个常量 `strat`，它的值是通过指定的 `key` 访问 `strats` 对象得到的，而当访问的属性不存在时，则使用 `defaultStrat` 作为值。
 
-这里我们就要明确了，`starts` 是什么？想弄明白这个问题，我们需要从整体角度去看一下 `options.js` 文件，首先看文件顶部的一堆 `import` 语句下的第一句代码：
+这里我们就要明确了，`strats` 是什么？想弄明白这个问题，我们需要从整体角度去看一下 `options.js` 文件，首先看文件顶部的一堆 `import` 语句下的第一句代码：
 
 ```js
 /**
@@ -115,7 +115,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 ```
 
-非生产环境下在 `strats` 策略对象上添加两个策略(两个属性)分别是 `el` 和 `propsData`，且这两个属性的值是一个函数。通过这两个属性的名字可知，这两个策略函数是用来合并 `el` 选项和 `propsData` 选项的。与其说“合并”不如说“处理”，因为其本质上并没有做什么合并工作。那么我们看看这个策略函数的具体内容，了解一下它是怎么处理的 `el` 和 `propsData` 选项的。
+非生产环境下在 `strats` 策略对象上添加两个策略(两个属性)分别是 `el` 和 `propsData`，且这两个属性的值是一个函数。通过这两个属性的名字可知，这两个策略函数是用来合并 `el` 选项和 `propsData` 选项的。与其说“合并”不如说“处理”，因为其本质上并没有做什么合并工作。那么我们看看这个策略函数的具体内容，了解一下它是怎么处理 `el` 和 `propsData` 选项的。
 
 首先是一段 `if` 判断分支，判断是否有传递 `vm` 参数：
 
@@ -171,7 +171,7 @@ vm.$options = mergeOptions(
 )
 ```
 
-所以我们可以理解为：策略函数中的 `vm` 来自于 `mergeOptions` 函数的第三个参数。所以当调用 `mergeOptions` 函数且不传递第三个参数的时候，那么在策略函数中就拿不到 `vm` 参数。所以我们可以猜测到一件事，那就是 `mergeOptions` 函数除了在 `_init` 方法中被调用之外，还在其他地方被调用，且没有传递第三个参数。那么到底是在哪里被调用的呢？这里可以先明确的告诉大家，就在 `Vue.extend` 方法中被调用的，大家可以打开 `core/global-api/extend.js` 文件找到 `Vue.extend` 方法，其中有这么一段代码：
+所以我们可以理解为：策略函数中的 `vm` 来自于 `mergeOptions` 函数的第三个参数。所以当调用 `mergeOptions` 函数且不传递第三个参数的时候，那么在策略函数中就拿不到 `vm` 参数。所以我们可以猜测到一件事，那就是 `mergeOptions` 函数除了在 `_init` 方法中被调用之外，还在其他地方被调用，且没有传递第三个参数。那么到底是在哪里被调用的呢？这里可以先明确地告诉大家，就是在 `Vue.extend` 方法中被调用的，大家可以打开 `core/global-api/extend.js` 文件找到 `Vue.extend` 方法，其中有这么一段代码：
 
 ```js
 Sub.options = mergeOptions(
@@ -205,7 +205,7 @@ const defaultStrat = function (parentVal: any, childVal: any): any {
 }
 ```
 
-实际上 `defaultStrat` 函数就如同它的名字一样，它是一个默认的策略，当一个选项不需要特殊处理的时候就是用默认的合并策略，它的逻辑很简单：只要子选项不是 `undefined` 那么就是用子选项，否则使用父选项。
+实际上 `defaultStrat` 函数就如同它的名字一样，它是一个默认的策略，当一个选项不需要特殊处理的时候就使用默认的合并策略，它的逻辑很简单：只要子选项不是 `undefined` 那么就是用子选项，否则使用父选项。
 
 但是大家还要注意一点，`strats.el` 和 `strats.propsData` 这两个策略函数是只有在非生产环境才有的，在生产环境下访问这两个函数将会得到 `undefined`，那这个时候 `mergeField` 函数的第一句代码就起作用了：
 
@@ -244,7 +244,7 @@ strats.data = function (
 }
 ```
 
-这段代码的作用是在 `strats` 策略对象上添加 `data` 策略函数，用来合并处理 `data` 选项的。我们看看这个策略函数的内容，首先是一个判断分支：
+这段代码的作用是在 `strats` 策略对象上添加 `data` 策略函数，用来合并处理 `data` 选项。我们看看这个策略函数的内容，首先是一个判断分支：
 
 ```js
 if (!vm) {
@@ -268,7 +268,7 @@ if (childVal && typeof childVal !== 'function') {
 return mergeDataOrFn(parentVal, childVal)
 ```
 
-首先判断是否传递了子组件的 `data` 选项(即：`childVal`)，并且检测 `childVla` 的类型是不是 `function`，如果 `childVla` 的类型不是 `function` 则会给你一个警告，也就是说 `childVla` 应该是一个函数，如果不是函数会提示你 `data` 的类型必须是一个函数，这就是我们知道的：*子组件中的 `data` 必须是一个返回对象的函数*。如果不是函数，除了给你一段警告之外，会直接返回 `parentVal`。
+首先判断是否传递了子组件的 `data` 选项(即：`childVal`)，并且检测 `childVal` 的类型是不是 `function`，如果 `childVal` 的类型不是 `function` 则会给你一个警告，也就是说 `childVal` 应该是一个函数，如果不是函数会提示你 `data` 的类型必须是一个函数，这就是我们知道的：*子组件中的 `data` 必须是一个返回对象的函数*。如果不是函数，除了给你一段警告之外，会直接返回 `parentVal`。
 
 如果 `childVal` 是函数类型，那说明满足了子组件的 `data` 选项需要是一个函数的要求，那么就直接返回 `mergeDataOrFn` 函数的执行结果：
 
@@ -405,7 +405,7 @@ return function mergedDataFn () {
 
 以上就是 `strats.data` 策略函数在处理子组件的 `data` 选项时所做的事，我们可以发现 `mergeDataOrFn` 函数在处理子组件选项时返回的总是一个函数，这也就间接导致 `strats.data` 策略函数在处理子组件选项时返回的也总是一个函数。
 
-说完了处理子选项的情况，我们再看看处理非子选项的情况，也就是使用 `new` 操作符创建实例时的情况，此时程序直接执行 `strats.data` 函数的最后一句代码：
+说完了处理子组件选项的情况，我们再看看处理非子组件选项的情况，也就是使用 `new` 操作符创建实例时的情况，此时程序直接执行 `strats.data` 函数的最后一句代码：
 
 ```js
 return mergeDataOrFn(parentVal, childVal, vm)
@@ -597,7 +597,7 @@ typeof parentVal === 'function' ? parentVal.call(this, this) : parentVal
 
 我们知道 `childVal` 要么是子组件的选项，要么是使用 `new` 操作符创建实例时的选项，无论是哪一种，总之 `childVal` 要么是函数，要么就是一个纯对象。所以如果是函数的话就通过执行该函数从而获取到一个纯对象，所以类似上面那段代码中判断 `childVal` 和 `parentVal` 的类型是否是函数的目的只有一个，获取数据对象(纯对象)。所以 `mergedDataFn` 和 `mergedInstanceDataFn` 函数内部调用 `mergeData` 方法时传递的两个参数就是两个纯对象(当然你可以简单的理解为两个JSON对象)。
 
-所以说既然知道了 `mergeData` 函数接收的两个参数就是两个纯对象，那么再看看 `mergeData` 函数的代码就轻松多了，它才是终极合并策略，其源码如下：
+所以说既然知道了 `mergeData` 函数接收的两个参数就是两个纯对象，那么再看 `mergeData` 函数的代码就轻松多了，它才是终极合并策略，其源码如下：
 
 ```js
 /**
@@ -626,7 +626,7 @@ function mergeData (to: Object, from: ?Object): Object {
 }
 ```
 
-`mergeData` 函数接收两个参数 `to` 和 `from`，根据 `mergeData` 函数被调用时参数的传递顺序我们知道，`to` 对应的是 `childVla` 产生的纯对象，`from` 对应 `parentVal` 产生的纯对象，我们看 `mergeData` 第一句代码：
+`mergeData` 函数接收两个参数 `to` 和 `from`，根据 `mergeData` 函数被调用时参数的传递顺序我们知道，`to` 对应的是 `childVal` 产生的纯对象，`from` 对应 `parentVal` 产生的纯对象，我们看 `mergeData` 第一句代码：
 
 ```js
 if (!from) return to
@@ -640,17 +640,17 @@ if (!from) return to
 return to
 ```
 
-其返回的仍是 `to` 对象，所以你应该能猜的到 `mergeData` 函数的作用，可以简单理解为：*将 `form` 对象的属性混合到 `to` 对象中，也可以说是将 `parentVal` 对象的属性混合到 `childVal` 中*，最后返回的是处理后的 `childVal` 对象。
+其返回的仍是 `to` 对象，所以你应该能猜的到 `mergeData` 函数的作用，可以简单理解为：*将 `from` 对象的属性混合到 `to` 对象中，也可以说是将 `parentVal` 对象的属性混合到 `childVal` 中*，最后返回的是处理后的 `childVal` 对象。
 
 `mergeData` 的具体做法就是像上面 `mergeData` 函数的代码段中所注释的那样，对 `from` 对象的 `key` 进行遍历：
 
 * 如果 `from` 对象中的 `key` 不在 `to` 对象中，则使用 `set` 函数为 `to` 对象设置 `key` 及相应的值。
 
-* 如果 `from` 对象中的 `key` 在 `to` 对象中，且这两个属性的值都是纯对象则递归的调用 `mergeData` 函数进行深度合并。
+* 如果 `from` 对象中的 `key` 在 `to` 对象中，且这两个属性的值都是纯对象则递归地调用 `mergeData` 函数进行深度合并。
 
 * 其他情况不做处理。
 
-上面提到了一个 `set` 函数，这个函数根据 `options.js` 文件头部的引用关系，可知这个函数来自于 `core/observer/index.js` 文件，实际上这个 `set` 函数就是 `Vue` 暴露给我们的全局API `Vue.set`。在这里由于我们还没有讲到 `set` 函数的具体实现，所以你就可以简单理解为 `set` 函数的功能与我们前面遇到过的 `extend` 工具函数功能相似即可了。
+上面提到了一个 `set` 函数，根据 `options.js` 文件头部的引用关系可知：这个函数来自于 `core/observer/index.js` 文件，实际上这个 `set` 函数就是 `Vue` 暴露给我们的全局API `Vue.set`。在这里由于我们还没有讲到 `set` 函数的具体实现，所以你就可以简单理解为 `set` 函数的功能与我们前面遇到过的 `extend` 工具函数功能相似即可。
 
 所以我们知道了 `mergeData` 函数的执行结果才是真正的数据对象，由于 `mergedDataFn` 和 `mergedInstanceDataFn` 这两个函数的返回值就是 `mergeData` 函数的执行结果，所以 `mergedDataFn` 和 `mergedInstanceDataFn` 函数的执行将会得到数据对象，我们还知道 `data` 选项会被 `mergeOptions` 处理成函数，比如处理成 `mergedInstanceDataFn`，所以：*最终得到的 `data` 选项是一个函数，且该函数的执行结果就是最终的数据对象*。
 
@@ -662,7 +662,7 @@ return to
 
 ### 二、为什么不在合并阶段就把数据合并好，而是要等到初始化的时候再合并数据？
 
-这个问题是什么意思呢？我们知道合并阶段 `strats.data` 将被处理成一个函数，但是这个函数并没有被执行，而是到了后面初始化的阶段才执行的，这个时候才会调用 `mergeData` 对数据进行合并处理，那这么做的目的是什么呢？
+这个问题是什么意思呢？我们知道在合并阶段 `strats.data` 将被处理成一个函数，但是这个函数并没有被执行，而是到了后面初始化的阶段才执行的，这个时候才会调用 `mergeData` 对数据进行合并处理，那这么做的目的是什么呢？
 
 其实这么做是有原因的，后面讲到 `Vue` 的初始化的时候，大家就会发现 `inject` 和 `props` 这两个选项的初始化是先于 `data` 选项的，这就保证了我们能够使用 `props` 初始化 `data` 中的数据，如下：
 
@@ -753,7 +753,7 @@ if (!parentVal) {
 
 ## 生命周期钩子选项的合并策略
 
-现在我们看了完 `strats.data` 策略函数，我们继续按照 `options.js` 文件的顺序看代码，接下来的一段代码如下：
+现在我们看完了 `strats.data` 策略函数，我们继续按照 `options.js` 文件的顺序看代码，接下来的一段代码如下：
 
 ```js
 /**
@@ -807,7 +807,7 @@ export const LIFECYCLE_HOOKS = [
 
 所以现在再回头来看那段 `forEach` 语句可知，它的作用就是在 `strats` 策略对象上添加用来合并各个生命周期钩子选项的策略函数，并且这些生命周期钩子选项的策略函数相同：*都是 `mergeHook` 函数*。
 
-那么 `mergeHook` 函数时怎样合并生命周期选项的呢？我们看看 `mergeHook` 函数的代码，如下：
+那么 `mergeHook` 函数是怎样合并生命周期选项的呢？我们看看 `mergeHook` 函数的代码，如下：
 
 ```js
 function mergeHook (
@@ -824,10 +824,10 @@ function mergeHook (
 }
 ```
 
-整个函数体由三组*三目运算符*组成，有一点值得大家学习的就是这里写三目运算符的方式，是不是感觉非常的清晰易读？那么这段代码的分析我们同样使用与上面代码相同的格式来写：
+整个函数体由三组*三目运算符*组成，有一点值得大家学习的就是这里写三目运算符的方式，是不是感觉非常地清晰易读？那么这段代码的分析我们同样使用与上面代码相同的格式来写：
 
 ```js
-retrun (是否有 childVal，即判断组件的选项中是否有对应名字的生命周期钩子函数)
+return (是否有 childVal，即判断组件的选项中是否有对应名字的生命周期钩子函数)
   ? 如果有 childVal 则判断是否有 parentVal
     ? 如果有 parentVal 则使用 concat 方法将二者合并为一个数组
     : 如果没有 parentVal 则判断 childVal 是不是一个数组
@@ -997,7 +997,7 @@ export const ASSET_TYPES = [
 
 我们发现 `ASSET_TYPES` 其实是由与资源选项“同名”的三个字符串组成的数组，注意所谓的“同名”是带引号的，因为数组中的字符串与真正的资源选项名字相比要少一个字符 `s`。
 
-| ASSET_TYPES   | 资源选项名字    |
+| ASSET_TYPES   | 资源选项名字   |
 | ------------- |:-------------:|
 | component     | component`s`  |
 | directive     | directive`s`  |
@@ -1032,7 +1032,7 @@ function mergeAssets (
 
 上面的代码本身逻辑很简单，首先以 `parentVal` 为原型创建对象 `res`，然后判断是否有 `childVal`，如果有的话使用 `extend` 函数将 `childVal` 上的属性混合到 `res` 对象上并返回。如果没有 `childVal` 则直接返回 `res`。
 
-举个例子，大家知道任何组件的模板中我们都可以直接使用 `<transition/>` 组件或者 `<keep-alive/>` 等，但是我们并没有在我们自己的组件实例的 `components` 选项中显示的声明这些组件。那么这是怎么做到的呢？其实答案就在 `mergeAssets` 函数中。以下面的代码为例：
+举个例子，大家知道任何组件的模板中我们都可以直接使用 `<transition/>` 组件或者 `<keep-alive/>` 等，但是我们并没有在我们自己的组件实例的 `components` 选项中显式地声明这些组件。那么这是怎么做到的呢？其实答案就在 `mergeAssets` 函数中。以下面的代码为例：
 
 ```js
 var v = new Vue({
@@ -1056,25 +1056,25 @@ components: {
 ```js
 Vue.options = {
 	components: {
-		KeepAlive
-		Transition,
-    TransitionGroup
+	  KeepAlive,
+	  Transition,
+	  TransitionGroup
 	},
 	directives: Object.create(null),
 	directives:{
-		model,
-    show
+	  model,
+	  show
 	},
 	filters: Object.create(null),
 	_base: Vue
 }
 ```
 
-所以 `Vue.options.components` 就应该一个对象：
+所以 `Vue.options.components` 就应该是一个对象：
 
 ```js
 {
-  KeepAlive
+  KeepAlive,
   Transition,
   TransitionGroup
 }
@@ -1086,7 +1086,7 @@ Vue.options = {
 const res = Object.create(parentVal || null)
 ```
 
-你可以通过 `res.KeepAlive` 访问当 `KeepAlive` 对象，因为虽然 `res` 对象自身属性没有 `KeepAlive`，但是它的原型上有。
+你可以通过 `res.KeepAlive` 访问到 `KeepAlive` 对象，因为虽然 `res` 对象自身属性没有 `KeepAlive`，但是它的原型上有。
 
 然后再经过 `return extend(res, childVal)` 这句话之后，`res` 变量将被添加 `ChildComponent` 属性，最终 `res` 如下：
 
@@ -1095,14 +1095,14 @@ res = {
   ChildComponent
   // 原型
   __proto__: {
-    KeepAlive
+    KeepAlive,
     Transition,
     TransitionGroup
   }
 }
 ```
 
-所以这就是为什么我们不用显示的注册组件就能够使用一些内置组件的原因，同时这也是内置组件的实现方式，通过 `Vue.extend` 创建出来的子类也是一样的道理，一层一层的通过原型进行组件的搜索。
+所以这就是为什么我们不用显式地注册组件就能够使用一些内置组件的原因，同时这也是内置组件的实现方式，通过 `Vue.extend` 创建出来的子类也是一样的道理，一层一层地通过原型进行组件的搜索。
 
 最后说一下 `mergeAssets` 函数中的这句话：
 
@@ -1176,7 +1176,7 @@ if (parentVal === nativeWatch) parentVal = undefined
 if (childVal === nativeWatch) childVal = undefined
 ```
 
-其中 `nativeWatch` 来自于 `core/util/env.js` 文件，大家可以在 [core/util 目录下的工具方法全解](/note/附录/core-util) 中查看其作用。在 `Firefox` 浏览器中 `Object.prototype` 拥有原生的 `watch` 函数，所以即便一个普通的对象你没有定义 `watch` 属性，但是依然可以通过原型链访问到原生的 `watch` 属性，这就会给 `Vue` 在处理选项的时候造成迷惑，因为 `Vue` 也提供了一个叫做 `watch` 的选项，即使你的组件选项中没有写 `watch` 选项，但是 `Vue` 通过原型访问到了原生的 `watch`。这不是我们想要的，所以上面两句代码的目的是一个变通方案，当发现组件选项是浏览器原生的 `watch` 时，那说明用户并没有提供 `Vue` 的 `watch` 选项，直接重置为 `undefined`。
+其中 `nativeWatch` 来自于 `core/util/env.js` 文件，大家可以在 [core/util 目录下的工具方法全解](../appendix/core-util.md) 中查看其作用。在 `Firefox` 浏览器中 `Object.prototype` 拥有原生的 `watch` 函数，所以即便一个普通的对象你没有定义 `watch` 属性，但是依然可以通过原型链访问到原生的 `watch` 属性，这就会给 `Vue` 在处理选项的时候造成迷惑，因为 `Vue` 也提供了一个叫做 `watch` 的选项，即使你的组件选项中没有写 `watch` 选项，但是 `Vue` 通过原型访问到了原生的 `watch`。这不是我们想要的，所以上面两句代码的目的是一个变通方案，当发现组件选项是浏览器原生的 `watch` 时，那说明用户并没有提供 `Vue` 的 `watch` 选项，直接重置为 `undefined`。
 
 然后是这句代码：
 
@@ -1304,7 +1304,7 @@ console.log(v.$options)
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-10-26-112916.jpg)
 
-可以发现 `watch.test` 变成了数组，但是 `watch.test` 并不一定总是数组，只有父选项(`parentVal`)也存对该字段的观测时它才是数组，如下：
+可以发现 `watch.test` 变成了数组，但是 `watch.test` 并不一定总是数组，只有父选项(`parentVal`)也存在时它才是数组，如下：
 
 ```js
 // 创建实例
@@ -1341,7 +1341,7 @@ if (!parentVal) return childVal
 }
 ```
 
-所以此时 `test` 字段就不在是数组了，而就是一个函数，同样可以通过打印实例的 `$options` 选项证明：
+所以此时 `test` 字段就不再是数组了，而就是一个函数，同样可以通过打印实例的 `$options` 选项证明：
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-10-26-113858.jpg)
 
@@ -1375,9 +1375,9 @@ strats.computed = function (
 }
 ```
 
-这段代码的作用是在 `strats` 策略对象上添加 `props`、`methods`、`inject` 以及 `computed` 策略函数，顾名思义这些策略函数分别用来合并处理同名选项的，并且所使用的策略相同。
+这段代码的作用是在 `strats` 策略对象上添加 `props`、`methods`、`inject` 以及 `computed` 策略函数，顾名思义这些策略函数是分别用来合并处理同名选项的，并且所使用的策略相同。
 
-对于 `props`、`methods`、`inject` 以及 `computed` 这四个选项有一个共同点，就是它们的结构都是纯对象，虽然我们在书写 `props` 或者 `inject` 选项的时候可能是一个数组，但是在 [Vue的思路之选项的规范化](/note/Vue的思路之选项的规范化) 一节中我们知道，`Vue` 内部都将其规范化为了一个对象。所以我们看看 `Vue` 是如何处理这些对象散列的。
+对于 `props`、`methods`、`inject` 以及 `computed` 这四个选项有一个共同点，就是它们的结构都是纯对象，虽然我们在书写 `props` 或者 `inject` 选项的时候可能是一个数组，但是在 [Vue的思路之选项的规范化](./4vue-normalize.md) 一节中我们知道，`Vue` 内部都将其规范化为了一个对象。所以我们看看 `Vue` 是如何处理这些对象散列的。
 
 策略函数内容如下：
 
@@ -1430,7 +1430,7 @@ strats.provide = mergeDataOrFn
 
 ## 再看 mixins 和 extends
 
-在 [4Vue选项的规范化](/note/4Vue选项的规范化) 一节中，我们讲到了 `mergeOptions` 函数中的如下这段代码：
+在 [Vue选项的规范化](./4vue-normalize.md) 一节中，我们讲到了 `mergeOptions` 函数中的如下这段代码：
 
 ```js
 const extendsFrom = child.extends
@@ -1470,7 +1470,7 @@ new Vue ({
 // created:instance
 ```
 
-这是因为 `mergeOptions` 函数在处理 `mixins` 选项的时候递归调用了 `mergeOptions` 函数将 `minxis` 合并到了 `parent` 中，并将合并后生成的新对象作为新的 `parent`：
+这是因为 `mergeOptions` 函数在处理 `mixins` 选项的时候递归调用了 `mergeOptions` 函数将 `mixins` 合并到了 `parent` 中，并将合并后生成的新对象作为新的 `parent`：
 
 ```js
 if (child.mixins) {
@@ -1483,31 +1483,3 @@ if (child.mixins) {
 上例中我们只涉及到 `created` 生命周期钩子的合并，所以会使用生命周期钩子的合并策略函数进行处理，现在我们已经知道 `mergeOptions` 会把生命周期选项合并为一个数组，所以所有的生命周期钩子都会被执行。那么不仅仅是生命周期钩子，任何写在 `mixins` 中的选项，都会使用 `mergeOptions` 中相应的合并策略进行处理，这就是 `mixins` 的实现方式。
 
 对于 `extends` 选项，与 `mixins` 相同，甚至由于 `extends` 选项只能是一个对象，而不能是数组，反而要比 `mixins` 的实现更为简单，连遍历都不需要。
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

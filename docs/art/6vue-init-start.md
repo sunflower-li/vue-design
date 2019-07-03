@@ -2,7 +2,7 @@
 
 ## 用于初始化的最终选项 $options
 
-在 [Vue的思路之以一个例子为线索](/note/Vue的思路之以一个例子为线索) 一节中，我们写了一个很简单的例子，这个例子如下：
+在 [以一个例子为线索](./3vue-example.md) 一节中，我们写了一个很简单的例子，这个例子如下：
 
 ```js
 var vm = new Vue({
@@ -23,7 +23,7 @@ vm.$options = mergeOptions(
 )
 ```
 
-正是因为上面的代码，使得我们花了大篇章来讲解其内部实现和运作，也就是 [Vue的思路之选项的规范化](/note/Vue的思路之选项的规范化) 和 [Vue的思路之选项的合并](/note/Vue的思路之选项的合并) 这两节所介绍的内容。现在我们已经知道了 `mergeOptions` 函数是如何对父子选项进行合并处理的，也知道了它的作用。
+正是因为上面的代码，使得我们花了大篇章来讲解其内部实现和运作，也就是 [Vue选项的规范化](./vue-normalize.md) 和 [Vue选项的合并](./vue-normalize.md) 这两节所介绍的内容。现在我们已经知道了 `mergeOptions` 函数是如何对父子选项进行合并处理的，也知道了它的作用。
 
 我们打开 `core/util/options.js` 文件，找到 `mergeOptions` 函数，看其最后一句代码：
 
@@ -33,7 +33,7 @@ return options
 
 这说明 `mergeOptions` 函数最终将合并处理后的选项返回，并以该返回值作为 `vm.$options` 的值。`vm.$options` 在 `Vue` 的官方文档中是可以找到的，它作为实例属性暴露给开发者，那么现在你应该知道 `vm.$options` 到底是什么了。并且看文档的时候你应该更能够理解其作用，比如官方文档是这样介绍 `$options` 实例属性的：
 
-> 用于当前 Vue 实例的初始化选项。需要在选项中包含自定义属性时会有用处
+> 用于当前 `Vue` 实例的初始化选项。需要在选项中包含自定义属性时会有用处
 
 并且给了一个例子，如下：
 
@@ -74,9 +74,9 @@ const v = new Sub({
 })
 ```
 
-最终，在实例的 `created` 方法中将打印为数字 `3`。上面的例子很简单，没有什么实际作用，但这为我们提供了自定义选项的机会，这其实是非常有用的。
+最终，在实例的 `created` 方法中将打印数字 `3`。上面的例子很简单，没有什么实际作用，但这为我们提供了自定义选项的机会，这其实是非常有用的。
 
-现在我们需要回到正题上了，还是拿我们例子，如下：
+现在我们需要回到正题上了，还是拿我们的例子，如下：
 
 ```js
 var vm = new Vue({
@@ -212,7 +212,7 @@ initProxy = function initProxy (vm) {
 }
 ```
 
-可以发现，如果 `Proxy` 存在，那么将会使用 `Proxy` 对 `vm` 做一层代理，代理对象赋值给 `vm._renderProxy`，所以今后对 `vm._renderProxy` 的访问，如果有代理那么就会被拦截。代理对象配置参数是 `handlers`，可以发现 `handlers` 即可能是 `getHandler` 又可能是 `hasHandler`，至于到底使用哪个，是由判断条件决定的：
+可以发现，如果 `Proxy` 存在，那么将会使用 `Proxy` 对 `vm` 做一层代理，代理对象赋值给 `vm._renderProxy`，所以今后对 `vm._renderProxy` 的访问，如果有代理那么就会被拦截。代理对象配置参数是 `handlers`，可以发现 `handlers` 既可能是 `getHandler` 又可能是 `hasHandler`，至于到底使用哪个，是由判断条件决定的：
 
 ```js
 options.render && options.render._withStripped
@@ -220,14 +220,14 @@ options.render && options.render._withStripped
 
 如果上面的条件为真，则使用 `getHandler`，否则使用 `hasHandler`，判断条件要求 `options.render` 和 `options.render._withStripped` 必须都为真才行，我现在明确告诉大家 `options.render._withStripped` 这个属性只在测试代码中出现过，所以一般情况下这个条件都会为假，也就是使用 `hasHandler` 作为代理配置。
 
-`hasHandler` 这个变量就定义在当前文件，如下：
+`hasHandler` 常量就定义在当前文件，如下：
 
 ```js
 const hasHandler = {
     has (target, key) {
-        // has 变量是真实经过 in 运算符得来的结果
+        // has 常量是真实经过 in 运算符得来的结果
         const has = key in target
-        // 如果 key 在 allowedGlobals 之内，或者 key 以下划线 _ 开头的字符串，则为真
+        // 如果 key 在 allowedGlobals 之内，或者 key 是以下划线 _ 开头的字符串，则为真
         const isAllowed = allowedGlobals(key) || (typeof key === 'string' && key.charAt(0) === '_')
         // 如果 has 和 isAllowed 都为假，使用 warnNonPresent 函数打印错误
         if (!has && !isAllowed) {
@@ -308,7 +308,7 @@ vm.$options.render = function () {
 }
 ```
 
-从上面的代码可以发现，显然函数使用 `with` 语句块指定了内部代码的执行环境为 `this`，由于 `render` 函数调用的时候使用 `call` 指定了其 `this` 指向为 `vm._renderProxy`，所以 `with` 语句块内代码的执行环境就是 `vm._renderProxy`，所以在 `with` 语句块内访问 `a` 就相当于访问 `vm._renderProxy` 的 `a` 属性，前面我们提到过 `with` 语句块内访问变量将会被 `Proxy` 的 `has` 代理所拦截，所以自然就执行了 `has` 函数内的代码。最终通过 `warnNonPresent` 打印警告信息给我们，所以这个代理的作用就是为了给在开发阶段给我们一个友好而准确的提示。
+从上面的代码可以发现，显然函数使用 `with` 语句块指定了内部代码的执行环境为 `this`，由于 `render` 函数调用的时候使用 `call` 指定了其 `this` 指向为 `vm._renderProxy`，所以 `with` 语句块内代码的执行环境就是 `vm._renderProxy`，所以在 `with` 语句块内访问 `a` 就相当于访问 `vm._renderProxy` 的 `a` 属性，前面我们提到过 `with` 语句块内访问变量将会被 `Proxy` 的 `has` 代理所拦截，所以自然就执行了 `has` 函数内的代码。最终通过 `warnNonPresent` 打印警告信息给我们，所以这个代理的作用就是为了在开发阶段给我们一个友好而准确的提示。
 
 我们理解了 `hasHandler`，但是还有一个 `getHandler`，这个代理将会在判断条件：
 
@@ -363,7 +363,7 @@ var vm = new Vue({
 })
 ```
 
-上面的代码由于 `render` 函数时我们手动书写的，所以 `render` 函数并不会被包裹在 `with` 语句块内，当然也就触发不了 `has` 拦截，但是由于 `render._withStripped` 也未定义，所以也不会被 `get` 拦截，那这个时候我们虽然访问了不存在的 `this.a`，但是却得不到警告，想要得到警告我们需要手动设置 `render._withStripped` 为 `true`：
+上面的代码由于 `render` 函数是我们手动书写的，所以 `render` 函数并不会被包裹在 `with` 语句块内，当然也就触发不了 `has` 拦截，但是由于 `render._withStripped` 也未定义，所以也不会被 `get` 拦截，那这个时候我们虽然访问了不存在的 `this.a`，但是却得不到警告，想要得到警告我们需要手动设置 `render._withStripped` 为 `true`：
 
 ```js
 const render = function (h) {
@@ -380,14 +380,14 @@ var vm = new Vue({
 })
 ```
 
-为什么会这么设计呢？这也许是 `Vue` 留的一个后门吧。
+为什么会这么设计呢？因为在使用 `webpack` 配合 `vue-loader` 的环境中， `vue-loader` 会借助 [`vuejs@component-compiler-utils`](https://github.com/vuejs/component-compiler-utils) 将 `template` 编译为不使用 `with` 语句包裹的遵循严格模式的 JavaScript，并为编译后的 `render` 方法设置 `render._withStripped = true`。在不使用 `with` 语句的 `render` 方法中，模板内的变量都是通过属性访问操作 `vm['a']` 或 `vm.a` 的形式访问的，从前文中我们了解到 `Proxy` 的 `has` 无法拦截属性访问操作，所以这里需要使用 `Proxy` 中可以拦截到属性访问的 `get`，同时也省去了 `has` 中的全局变量检查(全局变量的访问不会被 `get` 拦截)。
 
 现在，我们基本知道了 `initProxy` 的目的，就是设置渲染函数的作用域代理，其目的是为我们提供更好的提示信息。但是我们忽略了一些细节没有讲清楚，回到下面这段代码：
 
 ```js
 // has 变量是真实经过 in 运算符得来的结果
 const has = key in target
-// 如果 key 在 allowedGlobals 之内，或者 key 以下划线 _ 开头的字符串，则为真
+// 如果 key 在 allowedGlobals 之内，或者 key 是以下划线 _ 开头的字符串，则为真
 const isAllowed = allowedGlobals(key) || (typeof key === 'string' && key.charAt(0) === '_')
 // 如果 has 和 isAllowed 都为假，使用 warnNonPresent 函数打印错误
 if (!has && !isAllowed) {
@@ -403,7 +403,7 @@ if (!has && !isAllowed) {
 </template>
 ```
 
-其中 `Number` 为全局对象，如果去掉 `!isAllowed` 这个判断条件，那么上面模板的写法将会得到警告信息。除了允许使用全局对象之外，还允许方法以 `_` 开头的属性，这么做是由于渲染函数中会包含很多以 `_` 开头的内部方法，如之前我们查看渲染函数时遇到的 `_c`、`_v` 等等。
+其中 `Number` 为全局对象，如果去掉 `!isAllowed` 这个判断条件，那么上面模板的写法将会得到警告信息。除了允许使用全局对象之外，还允许以 `_` 开头的属性，这么做是由于渲染函数中会包含很多以 `_` 开头的内部方法，如之前我们查看渲染函数时遇到的 `_c`、`_v` 等等。
 
 最后对于 `proxy.js` 文件内的代码，还有一段是我们没有讲过的，就是下面这段：
 
@@ -426,7 +426,7 @@ if (hasProxy) {
 }
 ```
 
-上面的代码首先检测宿主环境是否支持 `Proxy`，如果支持的话才会执行里面的代码，内部的代码首先使用 `makeMap` 函数生成一个 `isBuiltInModifier` 函数，该函数用来检测给定的值是否是内置的事件修饰符，我们知道在 `Vue` 中我们可以使用事件修饰符很方便的做一些工作，比如阻止默认事件等。
+上面的代码首先检测宿主环境是否支持 `Proxy`，如果支持的话才会执行里面的代码，内部的代码首先使用 `makeMap` 函数生成一个 `isBuiltInModifier` 函数，该函数用来检测给定的值是否是内置的事件修饰符，我们知道在 `Vue` 中我们可以使用事件修饰符很方便地做一些工作，比如阻止默认事件等。
 
 然后为 `config.keyCodes` 设置了 `set` 代理，其目的是防止开发者在自定义键位别名的时候，覆盖了内置的修饰符，比如：
 
@@ -530,7 +530,7 @@ var vm = new Vue({
 })
 ```
 
-我们知道 `Vue` 给我们提供了 `parent` 选项，使得我们手动指定一个组件的父实例，但在上面的例子中，我们并没有手动指定 `parent` 选项，但是子组件依然能够正确的找到它的父实例，这说明 `Vue` 在寻找父实例的时候是自动检测的。那它是怎么做的呢？目前不准备给大家介绍，因为时机还不够成熟，现在讲大家很容易懵，不过可以给大家看一段代码，打开 `core/vdom/create-component.js` 文件，里面有一个函数叫做 `createComponentInstanceForVnode`，如下：
+我们知道 `Vue` 给我们提供了 `parent` 选项，使得我们可以手动指定一个组件的父实例，但在上面的例子中，我们并没有手动指定 `parent` 选项，但是子组件依然能够正确地找到它的父实例，这说明 `Vue` 在寻找父实例的时候是自动检测的。那它是怎么做的呢？目前不准备给大家介绍，因为时机还不够成熟，现在讲大家很容易懵，不过可以给大家看一段代码，打开 `core/vdom/create-component.js` 文件，里面有一个函数叫做 `createComponentInstanceForVnode`，如下：
 
 ```js
 export function createComponentInstanceForVnode (
@@ -583,7 +583,7 @@ var vm = new Vue({
 })
 ```
 
-上面的代码中，我们的子组件 `ChildComponent` 说白了就是一个 `json` 对象，或者叫做组件选项对象，在父组件的 `components` 选项中把这个子组件选项对象注册了进去，实际上在 `Vue` 内部，会首先以子组件选项对象作为参数通过 `Vue.extend` 函数创建一个子类出来，然后在通过实例化子类来创建子组件，而 `createComponentInstanceForVnode` 函数的作用，在这里大家就可以简单理解为实例化子组件，只不过这个过程是在虚拟DOM的 `patch` 算法中进行的，我们后边会详细去讲。我们看 `createComponentInstanceForVnode` 函数内部有这样一段代码：
+上面的代码中，我们的子组件 `ChildComponent` 说白了就是一个 `json` 对象，或者叫做组件选项对象，在父组件的 `components` 选项中把这个子组件选项对象注册了进去，实际上在 `Vue` 内部，会首先以子组件选项对象作为参数通过 `Vue.extend` 函数创建一个子类出来，然后再通过实例化子类来创建子组件，而 `createComponentInstanceForVnode` 函数的作用，在这里大家就可以简单理解为实例化子组件，只不过这个过程是在虚拟DOM的 `patch` 算法中进行的，我们后边会详细去讲。我们看 `createComponentInstanceForVnode` 函数内部有这样一段代码：
 
 ```js
 const options: InternalComponentOptions = {
@@ -711,7 +711,7 @@ if (parent && !options.abstract) {
   while (parent.$options.abstract && parent.$parent) {
     parent = parent.$parent
   }
-  // 经过上线的 while 循环后，parent 应该是一个非抽象的组件，将它作为当前实例的父级，所以将当前实例 vm 添加到父级的 $children 属性里
+  // 经过上面的 while 循环后，parent 应该是一个非抽象的组件，将它作为当前实例的父级，所以将当前实例 vm 添加到父级的 $children 属性里
   parent.$children.push(vm)
 }
 
@@ -859,7 +859,7 @@ vm.$slots = resolveSlots(options._renderChildren, renderContext)
 vm.$scopedSlots = emptyObject
 ```
 
-上面这段代码从表面上看很复杂，可以明确的告诉大家，如果你看懂了上面这段代码就意味着你已经知道了 `Vue` 是如何解析并处理 `slot` 的了。由于上面这段代码涉及内部选项比较多如：`options._parentVnode`、`options._renderChildren` 甚至 `parentVnode.context`，这些内容牵扯的东西比较多，现在大家对 `Vue` 的储备还不够，所以我们会在本节的最后阶段补讲，那个时候相信大家理解起来要容易多了。
+上面这段代码从表面上看很复杂，可以明确地告诉大家，如果你看懂了上面这段代码就意味着你已经知道了 `Vue` 是如何解析并处理 `slot` 的了。由于上面这段代码涉及内部选项比较多如：`options._parentVnode`、`options._renderChildren` 甚至 `parentVnode.context`，这些内容牵扯的东西比较多，现在大家对 `Vue` 的储备还不够，所以我们会在本节的最后阶段补讲，那个时候相信大家理解起来要容易多了。
 
 不讲归不讲，但是有一些事儿还是要讲清楚的，比如上面这段代码无论它处理的是什么内容，其结果都是在 `Vue` 当前实例对象上添加了三个实例属性：
 
@@ -869,7 +869,7 @@ vm.$slots
 vm.$scopedSlots
 ```
 
-我们把这些属性都整理到 [Vue实例的设计](/note/附录/Vue实例的设计) 中。
+我们把这些属性都整理到 [Vue实例的设计](../appendix/vue-ins.md) 中。
 
 再往下是这段代码：
 
@@ -923,7 +923,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 ```
 
-上面的代码主要作用就是在 `Vue` 实例对象上定义两个属性：`vm.$attrs` 以及 `vm.$listeners`。这两个属性在 `Vue` 的文档中是有说明的，由于这两个属性的存在使得在 `Vue` 中创建高阶组件变得更容易，感兴趣的同学可以阅读 [Vue 中创建高阶组件](/note/扩展阅读/Vue中创建高阶组件)。
+上面的代码主要作用就是在 `Vue` 实例对象上定义两个属性：`vm.$attrs` 以及 `vm.$listeners`。这两个属性在 `Vue` 的文档中是有说明的，由于这两个属性的存在使得在 `Vue` 中创建高阶组件变得更容易，感兴趣的同学可以阅读 [探索Vue高阶组件](../more/vue-hoc.md)。
 
 我们注意到，在为实例对象定义 `$attrs` 属性和 `$listeners` 属性时，使用了 `defineReactive` 函数，该函数的作用就是为一个对象定义响应式的属性，所以 `$attrs` 和 `$listeners` 这两个属性是响应式的，至于 `defineReactive` 函数的讲解，我们会放到 `Vue` 的响应系统中讲解。
 
@@ -974,7 +974,7 @@ export function updateChildComponent (
 
 上面代码是简化后的，可以发现 `isUpdatingChildComponent` 初始值为 `false`，只有当 `updateChildComponent` 函数开始执行的时候会被更新为 `true`，当 `updateChildComponent` 执行结束时又将 `isUpdatingChildComponent` 的值还原为 `false`，这是因为 `updateChildComponent` 函数需要更新实例对象的 `$attrs` 和 `$listeners` 属性，所以此时是不需要提示 `$attrs` 和 `$listeners` 是只读属性的。
 
-最后，对于大家来讲，现在了解这些知识就足够了，至于 `$attrs` 和 `$linsteners` 这两个属性的值到底是什么，等我们讲解虚拟DOM的时候再回来说明，这样大家更容易理解。
+最后，对于大家来讲，现在了解这些知识就足够了，至于 `$attrs` 和 `$listeners` 这两个属性的值到底是什么，等我们讲解虚拟DOM的时候再回来说明，这样大家更容易理解。
 
 ## 生命周期钩子的实现方式
 
@@ -1025,7 +1025,7 @@ const handlers = vm.$options[hook]
 const handlers = vm.$options.created
 ```
 
-在 [5Vue选项的合并](/note/5Vue选项的合并) 一节中我们讲过，对于生命周期钩子选项最终会被合并处理成一个数组，所以得到的 `handlers` 就是对应生命周期钩子的数组。接着执行的是这段代码：
+在 [Vue选项的合并](./5vue-merge.md) 一节中我们讲过，对于生命周期钩子选项最终会被合并处理成一个数组，所以得到的 `handlers` 就是对应生命周期钩子的数组。接着执行的是这段代码：
 
 ```js
 if (handlers) {
@@ -1045,7 +1045,7 @@ if (handlers) {
 handlers[i].call(vm)
 ```
 
-为了保证生命周期钩子函数内可以通过 `this` 访问实例对象，所以使用 `.call(vm)` 执行这些函数。另外由于生命周期钩子函数的函数体是开发者编写的，为了捕获可能出现的错误，使用 `try...catch` 语句块，并在 `catch` 语句块内使用 `handleError` 处理错误信息。其中 `handleError` 来自于 `core/util/error.js` 文件，大家可以在附录 [core/util 目录下的工具方法全解](/note/附录/core-util) 中查看关于 `handleError` 的讲解。
+为了保证生命周期钩子函数内可以通过 `this` 访问实例对象，所以使用 `.call(vm)` 执行这些函数。另外由于生命周期钩子函数的函数体是开发者编写的，为了捕获可能出现的错误，使用 `try...catch` 语句块，并在 `catch` 语句块内使用 `handleError` 处理错误信息。其中 `handleError` 来自于 `core/util/error.js` 文件，大家可以在附录 [core/util 目录下的工具方法全解](../appendix/core-util.md) 中查看关于 `handleError` 的讲解。
 
 所以我们发现，对于生命周期钩子的调用，其实就是通过 `this.$options` 访问处理过的对应的生命周期钩子函数数组，遍历并执行它们。原理还是很简单的。
 
@@ -1063,7 +1063,7 @@ callHook(vm, 'created')
 
 作为对立面，`created` 生命周期钩子则恰恰是等待 `initInjections`、`initState` 以及 `initProvide` 执行完毕之后才被调用，所以在 `created` 钩子中，是完全能够使用以上提到的内容的。但由于此时还没有任何挂载的操作，所以在 `created` 中是不能访问DOM的，即不能访问 `$el`。
 
-最后我们注意到 `callHook` 函数的最后有这段一段代码：
+最后我们注意到 `callHook` 函数的最后有这样一段代码：
 
 ```js
 if (vm._hasHookEvent) {
@@ -1071,7 +1071,7 @@ if (vm._hasHookEvent) {
 }
 ```
 
-其中 `vm._hasHookEvent` 是在 `initEvents` 函数中定义的，它的作用是判断是否存在**生命周期钩子的事件侦听器**，初始化值为 `false` 代表没有，当组件检测到存在**生命周期钩子的事件侦听器**时，会将 `vm._hasHookEvent` 设置为 `true`。那么问题来了，什么叫做**生命周期钩子的事件侦听器**呢？大家可以能不知道，其实 `Vue` 是可以这么玩儿的：
+其中 `vm._hasHookEvent` 是在 `initEvents` 函数中定义的，它的作用是判断是否存在**生命周期钩子的事件侦听器**，初始化值为 `false` 代表没有，当组件检测到存在**生命周期钩子的事件侦听器**时，会将 `vm._hasHookEvent` 设置为 `true`。那么问题来了，什么叫做**生命周期钩子的事件侦听器**呢？大家可能不知道，其实 `Vue` 是可以这么玩儿的：
 
 ```html
 <child
@@ -1082,7 +1082,7 @@ if (vm._hasHookEvent) {
  />
 ```
 
-如上代码可以使用 `hook:` 加 `生命周期钩子名称` 的方式来监听组件相应的生命周期事件。这是 `Vue` 官方文档上没有体现的，但你确实可以这么用，不过除了你对 `Vue` 非常了解，否则不建议使用。
+如上代码可以使用 `hook:` 加 `生命周期钩子名称` 的方式来监听组件相应的生命周期事件。这是 `Vue` 官方文档上没有体现的，但你确实可以这么用，不过除非你对 `Vue` 非常了解，否则不建议使用。
 
 正是为了实现这个功能，才有了这段代码：
 
@@ -1158,12 +1158,6 @@ if (opts.watch && opts.watch !== nativeWatch) {
 }
 ```
 
-采用同样的方式初始化 `computed` 选项，但是对于 `watch` 选项仅仅判断 `opts.watch` 是否存在是不够的，还要判断 `opts.watch` 是不是原生的 `watch` 对象。前面的章节中我们提到过，这是因在 `Firefox` 中原生提供了 `Object.prototype.watch` 函数，所以即使没有 `opts.watch` 选项，如果在火狐浏览器中依然能够通过原型链访问到原生的 `Object.prototype.watch`。但这其实不是我们想要的结果，所以这里加了一层判断避免把原生 `watch` 函数误认为是我们预期的 `opts.watch` 选项。之后才会调用 `initWatch` 函数初始化 `opts.watch` 选项。
+采用同样的方式初始化 `computed` 选项，但是对于 `watch` 选项仅仅判断 `opts.watch` 是否存在是不够的，还要判断 `opts.watch` 是不是原生的 `watch` 对象。前面的章节中我们提到过，这是因为在 `Firefox` 中原生提供了 `Object.prototype.watch` 函数，所以即使没有 `opts.watch` 选项，如果在火狐浏览器中依然能够通过原型链访问到原生的 `Object.prototype.watch`。但这其实不是我们想要的结果，所以这里加了一层判断避免把原生 `watch` 函数误认为是我们预期的 `opts.watch` 选项。之后才会调用 `initWatch` 函数初始化 `opts.watch` 选项。
 
-通过阅读 `initState` 函数，我们可以发现 `initState` 其实是很多选项初始化的汇总，包括：`props`、`methods`、`data`、`computed` 和 `watch` 等。并且我们注意到 `props` 选项的初始化要早于 `data` 选项的初始化，那么这是不是可以使用 `props` 初始化 `data` 数据的原因呢？答案是：“是的”。接下来我们就深入讲解这些初始化工作都做了什么事情。下一章节将我们将重点讲解 `Vue` 初始化中的关键一步：**数据响应系统**。
-
-
-
-
-
-
+通过阅读 `initState` 函数，我们可以发现 `initState` 其实是很多选项初始化的汇总，包括：`props`、`methods`、`data`、`computed` 和 `watch` 等。并且我们注意到 `props` 选项的初始化要早于 `data` 选项的初始化，那么这是不是可以使用 `props` 初始化 `data` 数据的原因呢？答案是：“是的”。接下来我们就深入讲解这些初始化工作都做了什么事情。下一章节我们将重点讲解 `Vue` 初始化中的关键一步：**数据响应系统**。

@@ -3,6 +3,10 @@ module.exports = {
   title: 'Vue技术内幕',
   ga: 'UA-120533817-1',
   description: '逐行级别的 Vue 源码分析',
+  head: [
+    ['script', { async: '', src: 'http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js' }],
+    ['link', { rel: 'icon', href: '/logo.png' }]
+  ],
   markdown: {
     toc: {
       includeLevel: [2, 3, 4, 5, 6]
@@ -26,6 +30,10 @@ module.exports = {
       {
         text: '扩展阅读',
         link: '/more/'
+      },
+      {
+        text: '辅助工具',
+        link: '/tools/'
       },
       {
         text: '人之初',
@@ -52,11 +60,12 @@ module.exports = {
             '8vue-reactive-dep-watch',
             '9vue-state-init',
             '80vue-compiler-start',
-            '81vue-parse-ast',
+            '81vue-lexical-analysis',
             '82vue-parsing',
-            '83vue-codegen',
-            '84vue-vdom',
-            '85vue-vdom-patch'
+            '83vue-parsing-2',
+            '84vue-codegen',
+            '85vue-vdom',
+            '86vue-vdom-patch'
           ]
         }
       ],
@@ -71,7 +80,8 @@ module.exports = {
             'core-util',
             'web-util',
             'shared-util',
-            'compiler-options'
+            'compiler-options',
+            'ast'
           ]
         }
       ],

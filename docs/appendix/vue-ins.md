@@ -1,6 +1,6 @@
 # Vue 实例的设计
 
-这里是对 `Vue` 实例的整理，利于我们直观的观察 `Vue`
+这里是对 `Vue` 实例的整理，有利于我们直观地观察 `Vue`
 
 ```js
 // Vue.prototype._init
@@ -48,4 +48,13 @@ vm._data
 
 // mountComponent()   src/core/instance/lifecycle.js
 vm.$el
+
+// initComputed()   src/core/instance/state.js
+vm._computedWatchers = Object.create(null)
+
+// initProps()    src/core/instance/state.js
+vm._props = {}
+
+// initProvide()    src/core/instance/inject.js
+vm._provided
 ```
